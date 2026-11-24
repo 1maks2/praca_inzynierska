@@ -301,10 +301,20 @@ Rzeczywisty zasięg jest mniejszy, ponieważ zależy także od mocy nadajnika i~
 % układ WGS-84, wysokość nad poziomem morza a wysokość elipsoidalna.
 
 % ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
 \section{Środowisko ROS~2}
 \label{sec:ros2}
 % (ok. 2 str.) Węzły, tematy, komunikaty, DDS, rosbag2 i format MCAP.
 
+Robot Operating System~2 (ROS~2) jest środowiskiem typu \textit{open-source} oraz zestawem bibliotek ułatwiających tworzenie aplikacji robotycznych i~przetwarzanie wielordzeniowe~\cite{ye2023realtime,ghiglino2023ringbuffer}.Wbrew nazwie nie jest systemem operacyjnym, lecz warstwą oprogramowania działającą w~systemie operacyjnym komputera~\cite{macenski2022}.Stanowi ono kontynuację i~rozwinięcie systemu ROS~1, z~naciskiem na wsparcie dla systemów czasu rzeczywistego oraz elastyczność w~zastosowaniach autonomicznych robotów~\cite{ye2023realtime,ghiglino2023ringbuffer}.
+
+Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależnych jednostek programu realizujących wydzielone zadania~\cite{ros2jazzy}. Węzły wymieniają dane głównie przez tematy (ang.~\textit{topic}) w~modelu publikacja--subskrypcja. Węzeł publikujący wysyła komunikaty (ang.~\textit{message}) do nazwanego tematu, nie wiedząc, kto je odbiera. Każdy węzeł subskrybujący dany temat otrzymuje każdy opublikowany w~nim komunikat~\cite{ros2jazzy}. Jeden temat może mieć wielu nadawców i~wielu odbiorców, co przedstawiono na rysunku~\ref{rys:ros2_graf}. Oprócz tematów ROS~2 udostępnia usługi (ang.~\textit{service}), realizujące komunikację typu zapytanie--odpowiedź, oraz akcje (ang.~\textit{action}), przeznaczone do zadań długotrwałych~\cite{ros2jazzy}
+
+Istotnym elementem ROS~2 jest model komunikacji obejmujący węzły, punkty końcowe komunikacji, typy wiadomości, stany cyklu życia, polityki jakości usług (ang.~\textit{Quality of Service}, QoS) oraz układy współrzędnych~\cite{damera2026sysml}. Ponieważ pojęcia te nie mają gotowych definicji w~standardowych językach modelowania, powstały biblioteki domenowe, takie jak \texttt{ros2-sysmlv2}, dostarczające je do ponownego wykorzystania w~modelowaniu systemów robotycznych w~języku SysML~v2~\cite{damera2026sysml}.
+
+ROS~2 jest również przedmiotem badań nad optymalizacją wydajności, gdzie proponuje się m.in.~wykonawcę opartego na buforze pierścieniowym (ang.~\textit{ring-buffer executor}), zwiększającego szybkość przetwarzania danych i~zmniejszającego zużycie zasobów w~zastosowaniach wymagających czasu rzeczywistego, np.~w~robotyce kosmicznej~\cite{ghiglino2023ringbuffer}. W~kontekście zastosowań motoryzacyjnych ROS~2 jest porównywany z~platformą Adaptive AUTOSAR jako elastyczna i~dynamiczna architektura oprogramowania dla przyszłych pojazdów autonomicznych~\cite{henle2022architecture}.
+
+Podsumowując, ROS~2 wspiera rozwój aplikacji robotycznych z~naciskiem na elastyczność, rozproszenie i~działanie w~czasie rzeczywistym -- od robotyki przemysłowej~\cite{macenski2022}, przez zastosowania kosmiczne~\cite{ghiglino2023ringbuffer} i~motoryzacyjne~\cite{henle2022architecture}, po zagadnienia bezpieczeństwa komunikacji~\cite{yang2024formal} oraz modelowania i~optymalizacji wydajności~\cite{damera2026sysml,ye2023realtime}.
 
 % ---------------------------------------------------------------------
 \section{Istniejące rozwiązania}
