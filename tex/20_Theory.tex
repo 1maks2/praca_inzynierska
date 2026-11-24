@@ -306,15 +306,38 @@ Rzeczywisty zasięg jest mniejszy, ponieważ zależy także od mocy nadajnika i~
 \label{sec:ros2}
 % (ok. 2 str.) Węzły, tematy, komunikaty, DDS, rosbag2 i format MCAP.
 
-Robot Operating System~2 (ROS~2) jest środowiskiem typu \textit{open-source} oraz zestawem bibliotek ułatwiających tworzenie aplikacji robotycznych i~przetwarzanie wielordzeniowe~\cite{ye2023realtime,ghiglino2023ringbuffer}.Wbrew nazwie nie jest systemem operacyjnym, lecz warstwą oprogramowania działającą w~systemie operacyjnym komputera~\cite{macenski2022}.Stanowi ono kontynuację i~rozwinięcie systemu ROS~1, z~naciskiem na wsparcie dla systemów czasu rzeczywistego oraz elastyczność w~zastosowaniach autonomicznych robotów~\cite{ye2023realtime,ghiglino2023ringbuffer}.
+Robot Operating System~2 (ROS~2) to zestaw bibliotek i~narzędzi wspierających budowę oprogramowania dla robotów. Mimo nazwy sugerującej system operacyjny stanowi on w~rzeczywistości warstwę oprogramowania (ang.~\textit{middleware}) uruchamianą na systemie operacyjnym Linux. ROS~2 zaprojektowano od nowa względem pierwszej wersji, m.in. z~myślą o~systemach wbudowanych, pracy w~czasie rzeczywistym i~komunikacji w~sieciach o~ograniczonej niezawodności~\cite{macenski2022}.
 
-Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależnych jednostek programu realizujących wydzielone zadania~\cite{ros2jazzy}. Węzły wymieniają dane głównie przez tematy (ang.~\textit{topic}) w~modelu publikacja--subskrypcja. Węzeł publikujący wysyła komunikaty (ang.~\textit{message}) do nazwanego tematu, nie wiedząc, kto je odbiera. Każdy węzeł subskrybujący dany temat otrzymuje każdy opublikowany w~nim komunikat~\cite{ros2jazzy}. Jeden temat może mieć wielu nadawców i~wielu odbiorców, co przedstawiono na rysunku~\ref{rys:ros2_graf}. Oprócz tematów ROS~2 udostępnia usługi (ang.~\textit{service}), realizujące komunikację typu zapytanie--odpowiedź, oraz akcje (ang.~\textit{action}), przeznaczone do zadań długotrwałych~\cite{ros2jazzy}
+Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależnych jednostek programu realizujących wydzielone zadania~\cite{ros2jazzy}. Węzły wymieniają dane głównie przez tematy (ang.~\textit{topic}) za pomocą modelu publikacji oraz subskrypcji. Węzeł publikujący wysyła komunikaty (ang.~\textit{message}) do nazwanego tematu, nie wiedząc, kto je odbiera. Każdy węzeł subskrybujący dany temat otrzymuje każdy opublikowany w~nim komunikat~\cite{ros2jazzy}. Jeden temat może mieć wielu nadawców i~wielu odbiorców, co przedstawiono na rysunku~\ref{rys:ros2_graf}.
 
-Istotnym elementem ROS~2 jest model komunikacji obejmujący węzły, punkty końcowe komunikacji, typy wiadomości, stany cyklu życia, polityki jakości usług (ang.~\textit{Quality of Service}, QoS) oraz układy współrzędnych~\cite{damera2026sysml}. Ponieważ pojęcia te nie mają gotowych definicji w~standardowych językach modelowania, powstały biblioteki domenowe, takie jak \texttt{ros2-sysmlv2}, dostarczające je do ponownego wykorzystania w~modelowaniu systemów robotycznych w~języku SysML~v2~\cite{damera2026sysml}.
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[font=\footnotesize, >=Stealth,
+      wezel/.style={draw, thick, ellipse, fill=akcent!8, align=center, minimum height=0.95cm, inner sep=2pt},
+      temat/.style={draw, thick, rectangle, fill=black!5, align=center, minimum height=0.8cm, inner sep=5pt},
+      plik/.style={draw, thick, cylinder, shape border rotate=90, aspect=0.25, fill=black!5, align=center,
+        minimum height=1.1cm, minimum width=1.3cm}]
+    \node[wezel] (a) {węzeł A\\ (nadawca)};
+    \node[temat, right=1.6cm of a] (t) {\texttt{/temat}};
+    \node[wezel, right=2.0cm of t, yshift=1.25cm] (b) {węzeł B};
+    \node[wezel, right=2.0cm of t] (c) {węzeł C};
+    \node[wezel, right=2.0cm of t, yshift=-1.25cm] (r) {rejestrator\\ rosbag2};
+    \node[plik, right=1.1cm of r] (f) {plik\\ MCAP};
+    \draw[->, thick] (a) -- node[above] {publikacja} (t);
+    \draw[->, thick] (t.east) -- node[sloped, above, pos=0.5] {subskrypcja} (b.west);
+    \draw[->, thick] (t.east) -- (c.west);
+    \draw[->, thick] (t.east) -- (r.west);
+    \draw[->, thick] (r) -- node[above] {zapis} (f);
+  \end{tikzpicture}
+  \caption{Komunikacja węzłów ROS~2 przez temat w~modelu publikacja--subskrypcja; węzły oznaczono elipsami, a~temat -- prostokątem; opracowanie własne}
+  \label{rys:ros2_graf}
+\end{figure}
 
-ROS~2 jest również przedmiotem badań nad optymalizacją wydajności, gdzie proponuje się m.in.~wykonawcę opartego na buforze pierścieniowym (ang.~\textit{ring-buffer executor}), zwiększającego szybkość przetwarzania danych i~zmniejszającego zużycie zasobów w~zastosowaniach wymagających czasu rzeczywistego, np.~w~robotyce kosmicznej~\cite{ghiglino2023ringbuffer}. W~kontekście zastosowań motoryzacyjnych ROS~2 jest porównywany z~platformą Adaptive AUTOSAR jako elastyczna i~dynamiczna architektura oprogramowania dla przyszłych pojazdów autonomicznych~\cite{henle2022architecture}.
+Komunikację między węzłami realizuje warstwa pośrednia zgodna ze standardem DDS (ang.~\textit{Data Distribution Service}). Odpowiada ona za automatyczne wykrywanie węzłów w~sieci, bez centralnego serwera, oraz za przesyłanie danych~\cite{macenski2022}. Dzięki rozproszonemu wykrywaniu węzły uruchomione na różnych komputerach w~tej samej sieci mogą wymieniać komunikaty bez dodatkowej konfiguracji.
 
-Podsumowując, ROS~2 wspiera rozwój aplikacji robotycznych z~naciskiem na elastyczność, rozproszenie i~działanie w~czasie rzeczywistym -- od robotyki przemysłowej~\cite{macenski2022}, przez zastosowania kosmiczne~\cite{ghiglino2023ringbuffer} i~motoryzacyjne~\cite{henle2022architecture}, po zagadnienia bezpieczeństwa komunikacji~\cite{yang2024formal} oraz modelowania i~optymalizacji wydajności~\cite{damera2026sysml,ye2023realtime}.
+Strukturę komunikatu opisuje plik interfejsu z~rozszerzeniem \texttt{.msg}, w~którym wymienia się pola i~ich typy~\cite{ros2jazzy}. Na tej podstawie narzędzia ROS~2 generują kod obsługujący komunikat w~językach C++ i~Python. Dostępne są standardowe typy komunikatów, np. \texttt{sensor\_msgs/NavSatFix}, przeznaczony do przekazywania pozycji z~odbiornika GNSS, oraz \texttt{sensor\_msgs/TimeReference}, przeznaczony do przekazywania czasu z~zewnętrznego źródła~\cite{ros2jazzy}. Wiele typów komunikatów zawiera nagłówek ze znacznikiem czasu i~nazwą układu współrzędnych, do którego odnoszą się dane. Gdy żaden typ standardowy nie odpowiada potrzebom, można zdefiniować własny typ komunikatu.
+
+Do rejestracji danych służy narzędzie rosbag2, które zapisuje komunikaty wybranych tematów do pliku wraz ze znacznikami czasu i~pozwala je później odtworzyć~\cite{ros2jazzy}. Odtwarzane komunikaty są publikowane w~tych samych tematach, dlatego węzły przetwarzające dane działają tak samo jak podczas pracy na żywo. Podczas odtwarzania można publikować również zegar odpowiadający czasowi nagrania, dzięki czemu węzły posługują się czasem zapisu zamiast czasem bieżącym~\cite{ros2jazzy}. Od dystrybucji Iron, wydanej w maju 2023 roku domyślnym formatem zapisu jest MCAP. Plik w~tym formacie zawiera schematy zapisanych komunikatów, dzięki czemu można go odczytać także bez zainstalowanych definicji typów komunikatów~\cite{mcap}.
 
 % ---------------------------------------------------------------------
 \section{Istniejące rozwiązania}
