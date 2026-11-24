@@ -1,8 +1,4 @@
 %20_Theory.tex -- Rozdział 2. Podstawy teoretyczne
-% sprawdzic cytowanie o lotu do finlandi https://www.peter2000.co.uk/aviation/misc/ICAO_Annex_10_Volume_III.pdf
-
-
-
 \tikzset{
   samolot/.pic={
     \fill[black!80] (-0.62,-0.06) -- (0.42,-0.06)
@@ -30,38 +26,33 @@
   },
 }
 
+
+% ---------------------------------------------------------------------
 \chapter{Podstawy teoretyczne}
 \label{chap:teoria}
- 
-% [ZMIANA] Przeredagowano wstęp: zbędny przecinek, „mode S” -> Mode~S, styl.
+% =====================================================================
+
+
 W~rozdziale przedstawiono podstawy teoretyczne zagadnień wykorzystanych w~dalszej części pracy. Omówiono system ADS-B i~budowę ramek Mode~S, sposób kodowania położenia w~wiadomościach ADS-B, odbiór sygnałów za pomocą radia definiowanego programowo, wyznaczanie pozycji i~czasu przez odbiornik GNSS oraz środowisko ROS~2, w~którym udostępniane są dane. Rozdział zamyka przegląd istniejących rozwiązań.
- 
+
+
 % ---------------------------------------------------------------------
 \section{Standard ADS-B i~ramki Mode~S}
+% =====================================================================
 \label{sec:adsb}
-% (ok. 2 str.) DF, adres ICAO, typecode, CRC, przykładowa ramka
-% *8D461E16231893B61E08203120B1; rozłożona na pola (rysunek rys:ramka_df17).
- 
-% [ZMIANA] „dozoru” -> „dozorowania”; zdanie z podmiotem „radar”; \cite przed kropką.
+
+
 Początkiem dozorowania ruchu lotniczego było wykorzystanie radaru pierwotnego (ang.~\textit{primary surveillance radar}, PSR). Radar ten wysyła krótkie impulsy radiowe i~odbiera ich odbicia od statku powietrznego. Na podstawie różnicy czasu między wysłaniem impulsu a~odebraniem echa radar wyznacza odległość do celu, a~azymut z~kąta obrotu anteny. Rozwiązanie to nie dostarcza jednak informacji o~tożsamości statku powietrznego ani o~jego wysokości~\cite{sun2021}.
- 
-% [ZMIANA] Jednostki \SI; opis trybów A i C; „maszyn” -> statków powietrznych;
-%          poprawiono zdanie o 4096 kodach (brakowało orzeczenia).
+
 Brakujące informacje dostarcza radar wtórny (ang.~\textit{secondary surveillance radar}, SSR), który wysyła zapytania na częstotliwości \SI{1030}{\mega\hertz}. Transponder statku powietrznego odpowiada na nie na częstotliwości \SI{1090}{\mega\hertz}. W~pierwszych trybach pracy, oznaczonych literami A i~C, odpowiedź transpondera zawiera w~trybie~A czterocyfrowy kod identyfikacyjny w~zapisie ósemkowym (ang.~\textit{squawk code}), a~w~trybie~C wysokość barometryczną. O~ile rozwiązanie to sprawdzało się przy niewielkim natężeniu ruchu, o~tyle wraz z~rozwojem lotnictwa ujawniły się jego ograniczenia. Gdy kilka statków powietrznych znajduje się w~tym samym kierunku względem radaru, ich odpowiedzi nakładają się na siebie, co uniemożliwia poprawny odczyt. Dodatkowo liczba dostępnych kodów, wynosząca \num{4096} ($8^4$), okazała się niewystarczająca dla obecnego ruchu lotniczego~\cite{sun2021}.
- 
-% [ZMIANA] Literówki (wprowadzając, dziewięćdziesiątych, Dodatkowo), rodzaj (opracowany, wdrożony),
-%          nazwa MIT bez dzielenia, „wyeliminowało” -> „ograniczyło”, usunięto „główne źródło informacji”
-%          (brak w źródle), \num, „komunikaty/pakiet” -> „odpowiedzi/ramka”, termin ang. z „ang.”.
+
 Część z~tych problemów rozwiązano, wprowadzając tryb Mode~S (ang.~\textit{Mode Select}), opracowany w~latach siedemdziesiątych XX~wieku w~Lincoln Laboratory Massachusetts Institute of Technology i~wdrażany w~kontroli ruchu lotniczego od lat dziewięćdziesiątych. Najważniejszą cechą wyróżniającą ten tryb jest wysyłanie selektywnych zapytań, kierowanych do wybranego statku powietrznego, co ograniczyło problem nakładania się odpowiedzi. Dodatkowo zamiast jednego z~\num{4096} kodów każdy transponder Mode~S ma unikalny 24-bitowy adres, nazywany adresem ICAO, co pozwala rozróżnić do \num{16777216} statków powietrznych. Odpowiedzi Mode~S mają postać ramek o~długości 56 lub 112~bitów, przy czym pierwsze 5~bitów (ang.~\textit{downlink format}, DF) jednoznacznie określa strukturę i~interpretację pozostałej części ramki~\cite{sun2021}.
- 
-% [ZMIANA] Termin ang. z „ang.” i małymi literami; dopisano zdanie o wspólnym transponderze
-%          i różnicy w zasadzie dozorowania (wyjaśnia, co porównuje rysunek 2.1).
+
 W~trybie Mode~S przewidziano również tzw. rozszerzony squitter (ang.~\textit{extended squitter}). Jest to długa, 112-bitowa ramka wysyłana przez transponder samoczynnie, bez uprzedniego zapytania ze strony radaru~\cite{sun2021}. Ramki tego typu przenoszą wiadomości systemu ADS-B (ang.~\textit{Automatic Dependent Surveillance--Broadcast}). W~systemie tym statek powietrzny wyznacza własną pozycję za pomocą odbiornika nawigacji satelitarnej (GNSS), a~następnie regularnie rozgłasza ją drogą radiową wraz z~prędkością i~innymi parametrami lotu. Wiadomości ADS-B nadaje ten sam transponder Mode~S i~na tej samej częstotliwości \SI{1090}{\mega\hertz}, na której wysyłane są odpowiedzi dla radaru wtórnego. Oba systemy różnią się jednak zasadą dozorowania: w~radarze wtórnym położenie wyznacza stacja naziemna, a~w~systemie ADS-B statek powietrzny. Różnicę tę przedstawiono na rysunku~\ref{rys:ssr_adsb}.
  
 \begin{figure}[htbp]
   \centering
   \begin{tikzpicture}[font=\footnotesize, >=Stealth]
-    % ----- (a) radar wtórny -----
     \node[anchor=west] at (0,4.35) {(a) radar wtórny};
     \draw[black!50] (0,0) -- (6.6,0);
     \pic at (1.1,0) {radar};
@@ -70,7 +61,6 @@ W~trybie Mode~S przewidziano również tzw. rozszerzony squitter (ang.~\textit{e
     \draw[->, black!80, thick] (4.65,2.70) -- node[sloped, below] {odpowiedź, \SI{1090}{\mega\hertz}} (1.65,0.55);
     \node[align=center, anchor=north] at (1.1,-0.08) {radar mierzy odległość\\ i~azymut};
     \node[align=center, anchor=south] at (5.3,3.55) {transponder podaje\\ kod lub wysokość};
-    % ----- (b) ADS-B -----
     \begin{scope}[xshift=7.7cm]
       \node[anchor=west] at (0,4.35) {(b) ADS-B};
       \draw[black!50] (0,0) -- (7.2,0);
@@ -91,16 +81,11 @@ W~trybie Mode~S przewidziano również tzw. rozszerzony squitter (ang.~\textit{e
       \node[align=center, akcent] at (3.60,0.75) {rozgłaszanie, \SI{1090}{\mega\hertz}:\\ pozycja, prędkość,\\ identyfikacja};
     \end{scope}
   \end{tikzpicture}
-  % [ZMIANA] Podpis mówi, co porównuje rysunek (zasadę dozorowania).
   \caption{Zasada dozorowania: (a) radar wtórny -- położenie wyznacza stacja naziemna, (b) system ADS-B -- położenie wyznacza i~rozgłasza statek powietrzny; opracowanie własne na podstawie~\cite{sun2021}}
   \label{rys:ssr_adsb}
 \end{figure}
- 
-% [ZMIANA] Jednostki \SI, „węzłów” -> kt (węzeł = pojęcie z ROS), „squitter'ze” -> „squitterze”,
-%          „komercyjnych” usunięto (źródło mówi o większości statków powietrznych).
 W~przestrzeni powietrznej Unii Europejskiej nadajnik ADS-B pracujący na częstotliwości \SI{1090}{\mega\hertz} w~trybie rozszerzonego squittera stanowi obowiązkowe wyposażenie statków powietrznych o~maksymalnej masie startowej powyżej \SI{5700}{kg} lub o~maksymalnej prędkości przelotowej przekraczającej \SI{250}{kt}~\cite{ue2023_1770}. W~efekcie wiadomości ADS-B nadaje obecnie większość statków powietrznych~\cite{sun2021}. Rozważano również inne sposoby realizacji ADS-B, m.in. łącze UAT (ang.~\textit{Universal Access Transceiver}). Najszerzej przyjęła się jednak realizacja oparta na rozszerzonym squitterze Mode~S, a~łącze UAT wdrożono jedynie częściowo, np. w~Stanach Zjednoczonych~\cite{sun2021}. W~dalszej części pracy pojęcie ADS-B odnosi się wyłącznie do realizacji opartej na rozszerzonym squitterze.
- 
-% [ZMIANA] Zamiast „na rysunku poniżej:” -- odwołanie \ref (rysunek może trafić na inną stronę).
+
 Ramka ADS-B ma długość 112~bitów i~jest podzielona na pięć pól, które przedstawiono na rysunku~\ref{rys:ramka_df17}~\cite{sun2021}.
  
 \begin{figure}[htbp]
@@ -130,7 +115,6 @@ Ramka ADS-B ma długość 112~bitów i~jest podzielona na pięć pól, które pr
     \node[align=center] at (8.6,-1.75)  {TC\,=\,4: identyfikacja,\\ znak wywoławczy \texttt{FIN6G}};
     \node[align=center] at (13.3,-1.75) {suma kontrolna\\ poprawna};
   \end{tikzpicture}
-  % [ZMIANA] Przywrócono informację o nieproporcjonalnych szerokościach pól.
   \caption{Pola ramki ADS-B na przykładzie ramki \texttt{8D461E16231893B61E08203120B1} zarejestrowanej przez stację bazową; pierwsze 5~bitów pola ME stanowi kod typu TC; szerokości pól nie są proporcjonalne do liczby bitów; opracowanie własne na podstawie~\cite{sun2021}}
   \label{rys:ramka_df17}
 \end{figure}
@@ -154,12 +138,6 @@ Znaczenie pól ramki i przykładowe wartości zestawiono w~tabeli~\ref{tab:pola_
     \bottomrule
   \end{tabular}
 \end{table}
- 
-% [ZMIANA] Jedno długie zdanie podzielono na kilka; poprawiono znaczenie CA = 5 (statek powietrzny
-%          w powietrzu, wg tabeli CA u Suna, rozdz. 3); „znak ICAO” -> „adres ICAO”; spacja przed \cite.
-%          Usunięto „(lot Kraków--Helsinki)” -- w ramce nie ma trasy; jeśli chcesz to zostawić,
-%          podaj źródło (np. Flightradar24 z datą dostępu).
-%          SPRAWDŹ: czy masz wpis icao_annex10_v3 w bibliography.bib i czy widziałeś ten dokument.
 W~przykładzie z~rysunku~\ref{rys:ramka_df17} wartość DF\,=\,17 oznacza wiadomość ADS-B. Wartość CA\,=\,5 wskazuje na transponder poziomu~2 lub wyższego, a~ponadto informuje, że statek powietrzny znajduje się w~powietrzu~\cite{sun2021}.
 
 Pole ME ramki z~rysunku~\ref{rys:ramka_df17} zapisano szesnastkowo jako \texttt{231893B61E0820}. Pierwszy bajt, \texttt{23}, ma postać binarną \texttt{00100011}. Jego pierwsze pięć bitów (\texttt{00100}) daje kod typu TC\,=\,4, czyli wiadomość identyfikacyjną. Kolejne trzy bity (\texttt{011}) określają kategorię statku powietrznego, oznacza dla TC\,=\,4 średni statek powietrzny kategorii 2 czyli ważący od 34 do 136 ton.~\cite{sun2021}. Pozostałe 48~bitów dzieli się na osiem bloków po 6~bitów, z~których każdy koduje jeden znak znaku wywoławczego. Wartości liczbowe bloków odpowiadają znakom zgodnie z~tablicą z~książki~\cite{sun2021}: liczby od 1 do 26 oznaczają litery A--Z, liczba 32 -- spację, a~liczby od 48 do 57 -- cyfry 0--9. Przebieg dekodowania przedstawiono w~tabeli~\ref{tab:znak_wywolawczy}. Wynikiem jest znak wywoławczy FIN6G, dopełniony trzema spacjami do ośmiu znaków.
@@ -183,20 +161,149 @@ Pole ME ramki z~rysunku~\ref{rys:ramka_df17} zapisano szesnastkowo jako \texttt{
 Ostatnim elementem ramki jest 24-bitowe pole PI, zawierające cykliczną sumę kontrolną CRC (ang. \textit{cyclic redundancy check}), obliczaną na podstawie pierwszych 88~bitów wiadomości~\cite{sun2021}. Odbiornik wyznacza własną wartość sumy dla odebranych danych i~porównuje ją z~wartością zapisaną w~polu PI. Niezgodność wykazana podczas weryfikacji świadczy o~uszkodzeniu ramki w~trakcie transmisji radiowej. Wykorzystany algorytm CRC umożliwia nie tylko wykrywanie przekłamań, ale również korekcję pojedynczych błędów bitowych~\cite{sun2021}.
 
 Przy wykorzystaniu wiadomości ADS-B jako danych referencyjnych należy uwzględnić ograniczenia systemu. Położenie podaje sam statek powietrzny, a~protokół nie przewiduje uwierzytelnienia nadawcy ani szyfrowania wiadomości. System jest przez to podatny na celowe zakłócanie oraz nadawanie fałszywych wiadomości (ang.~\textit{spoofing})~\cite{strohmeier2015security}. Kanał \SI{1090}{\mega\hertz} jest współdzielony przez transpondery wszystkich statków powietrznych, które nadają zarówno wiadomości ADS-B, jak i~odpowiedzi na zapytania radarów wtórnych. Przy dużym natężeniu ruchu część ramek nakłada się więc na siebie i~zostaje utracona~\cite{strohmeier2014realities}. Adres ICAO może ponadto zostać przeprogramowany, co obserwowano m.in. w~przypadku statków powietrznych wojskowych~\cite{sun2021}. Wymagania wynikające z~tych ograniczeń sformułowano w~podrozdziale~\ref{sec:wymagania_referencja}.
-% ---------------------------------------------------------------------
-\section{Kodowanie położenia CPR}
-\label{sec:cpr}
-% (ok. 1,5 str.) Strefy CPR, ramki parzyste/nieparzyste, dekodowanie
-% globalne (para ramek) i lokalne (jedna ramka + pozycja odniesienia).
+
 
 % ---------------------------------------------------------------------
-\section{Odbiór sygnałów z~wykorzystaniem SDR}
-\label{sec:sdr}
-
+\section{Kodowanie położenia CPR}\label{sec:cpr}
 % =====================================================================
 
-% [ŹRÓDŁO] sun2021, rozdz. 1.4.2 "Mode S replies" (s. 17), rys. 1.4 -- 1 bit/us, preambuła 8 us, dane 56/112 us, PPM.
-%           Rysunek -- własny (początek ramki z rys. rys:ramka_df17, bajt 8D).
+
+W~wiadomości o~położeniu na każdą ze współrzędnych geograficznych przeznaczono 17~bitów~\cite{sun2021}. Bezpośredni zapis długości geograficznej z~zakresu \ang{360} na 17~bitach dawałby rozdzielczość około \ang{0.0027}, czyli na równiku około \SI{300}{m}. Rozdzielczość ta jest wielokrotnie gorsza od dokładności odbiorników GNSS. Z~tego powodu stosuje się kodowanie CPR (ang.~\textit{compact position reporting}), w~którym przesyła się położenie statku powietrznego wewnątrz strefy o~ograniczonych wymiarach. Dla strefy o~rozciągłości \ang{6} szerokości geograficznej ta sama liczba bitów zapewnia rozdzielczość około \SI{5}{m}. Ceną za dokładność jest niejednoznaczność, ponieważ pojedyncza wiadomość nie wskazuje, w~której strefie znajduje się statek powietrzny~\cite{sun2021}.
+
+Statek powietrzny nadaje na przemian dwa rodzaje wiadomości o~położeniu: parzyste i~nieparzyste. Różnią się one rozmiarem stref szerokości geograficznej, który wynosi~\cite{sun2021}
+\begin{equation}
+  \Delta\varphi_i = \frac{\ang{360}}{4N_{\mathrm{Z}} - i},
+  \label{eq:dlat}
+\end{equation}
+\begin{gdzie}
+  \item $\Delta\varphi_i$ -- rozciągłość strefy szerokości geograficznej, w~stopniach,
+  \item $N_{\mathrm{Z}} = 15$ -- liczba stref szerokości geograficznej między równikiem a~biegunem,
+  \item $i$ -- rodzaj wiadomości: $i = 0$ dla wiadomości parzystej, $i = 1$ dla nieparzystej.
+\end{gdzie}
+Strefy wiadomości parzystych mają więc rozciągłość \ang{6}, a~nieparzystych -- około \ang{6.1}. Liczba stref długości geograficznej, oznaczana $\operatorname{NL}(\varphi)$, zależy od szerokości geograficznej $\varphi$. Wynosi ona 59 przy równiku i~maleje do 1 w~pobliżu biegunów~\cite{sun2021}.
+Wyraża ją wzór~\cite{sun2021}
+\begin{equation}
+  \operatorname{NL}(\varphi) = \left\lfloor
+    \frac{2\pi}{\arccos\left(1 - \dfrac{1 - \cos\dfrac{\pi}{2N_{\mathrm{Z}}}}{\cos^{2}\varphi}\right)}
+  \right\rfloor,
+  \label{eq:nl}
+\end{equation}
+w~którym symbol $\lfloor\cdot\rfloor$ oznacza zaokrąglenie w~dół do liczby całkowitej. Przebieg funkcji~\eqref{eq:nl} przedstawiono na rysunku~\ref{rys:nl}. Dla szerokości geograficznej Krakowa $\operatorname{NL} = 38$, co daje strefy o~rozciągłości około \ang{9.5} długości geograficznej.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=13cm, height=6.2cm,
+      xmin=0, xmax=90, ymin=0, ymax=62,
+      xtick={0,10,...,90}, ytick={0,10,...,60},
+      xlabel={$\varphi$ [\si{\degree}]}, ylabel={$\operatorname{NL}(\varphi)$ [--]},
+      grid=major, grid style={black!12},
+      tick label style={font=\footnotesize}, label style={font=\footnotesize},
+      /pgf/number format/use comma,
+    ]
+      \addplot[const plot mark left, thick, akcent] coordinates {
+        (0,59) (10.4705,58) (14.8282,57) (18.1863,56) (21.0294,55) (23.545,54) (25.8292,53)
+        (27.939,52) (29.9114,51) (31.7721,50) (33.5399,49) (35.229,48) (36.8503,47) (38.4124,46)
+        (39.9226,45) (41.3865,44) (42.8091,43) (44.1945,42) (45.5463,41) (46.8673,40) (48.1604,39)
+        (49.4278,38) (50.6715,37) (51.8934,36) (53.0952,35) (54.2782,34) (55.4438,33) (56.5932,32)
+        (57.7275,31) (58.8476,30) (59.9546,29) (61.0492,28) (62.1322,27) (63.2043,26) (64.2662,25)
+        (65.3185,24) (66.3617,23) (67.3965,22) (68.4232,21) (69.4424,20) (70.4545,19) (71.4599,18)
+        (72.4588,17) (73.4518,16) (74.4389,15) (75.4206,14) (76.3968,13) (77.3679,12) (78.3337,11)
+        (79.2943,10) (80.2492,9) (81.198,8) (82.1396,7) (83.072,6) (83.9917,5) (84.8917,4)
+        (85.7554,3) (86.5354,2) (87,1) (90,1)
+      };
+      \draw[dashed, black!70] (axis cs:50.06,0) -- (axis cs:50.06,38);
+      \node[anchor=south west, font=\footnotesize] at (axis cs:51,39) {Kraków: $\varphi \approx \ang{50.1}$, $\operatorname{NL} = 38$};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Liczba stref długości geograficznej w~funkcji szerokości geograficznej; opracowanie własne na podstawie wzoru~\eqref{eq:nl}}
+  \label{rys:nl}
+\end{figure}
+
+W~wiadomości przesyła się położenie statku powietrznego wewnątrz strefy, wyrażone ułamkiem jej rozmiaru~\cite{sun2021}:
+\begin{equation}
+  \varphi_{\mathrm{cpr},i} = \frac{Y_i}{2^{17}},
+  \label{eq:cpr}
+\end{equation}
+\begin{gdzie}
+  \item $\varphi_{\mathrm{cpr},i}$ -- położenie wewnątrz strefy szerokości geograficznej, z~przedziału $[0, 1)$,
+  \item $Y_i$ -- 17-bitowa liczba całkowita odczytana z~wiadomości.
+\end{gdzie}
+Długość geograficzną koduje się analogicznie. Pojedyncza wiadomość wskazuje więc tylko zbiór możliwych położeń, po jednym w~każdej strefie. Do wyboru właściwego z~nich stosuje się dekodowanie globalne albo lokalne, których ideę przedstawiono w~uproszczonej, jednowymiarowej postaci na rysunku~\ref{rys:cpr_idea}.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[font=\footnotesize, x=0.38cm, y=1cm, >=Stealth]
+    \node[anchor=west] at (-6.0,3.55) {(a) dekodowanie globalne};
+    \node[anchor=east] at (-0.4,2.8) {wiadomość parzysta};
+    \draw[black!60] (0,2.8) -- (30,2.8);
+    \foreach \x in {0,6,...,30} \draw[black!60] (\x,2.65) -- (\x,2.95);
+    \foreach \x in {5,11,17,23,29} \fill[akcent] (\x,2.8) circle (2.3pt);
+    \node[anchor=east] at (-0.4,2.0) {wiadomość nieparzysta};
+    \draw[black!60] (0,2.0) -- (30,2.0);
+    \foreach \x in {0,5,...,30} \draw[black!60] (\x,1.85) -- (\x,2.15);
+    \foreach \x in {2,7,12,17,22,27} \fill[black!70] (\x,2.0) circle (2.3pt);
+    \draw[dashed, thick] (17,1.7) -- (17,3.2);
+    \node[anchor=south] at (17,3.2) {jedyny wspólny kandydat};
+    \node[anchor=west] at (-6.0,1.15) {(b) dekodowanie lokalne};
+    \fill[akcent!12] (12,0.2) rectangle (18,0.8);
+    \node[anchor=east] at (-0.4,0.5) {wiadomość parzysta};
+    \draw[black!60] (0,0.5) -- (30,0.5);
+    \foreach \x in {0,6,...,30} \draw[black!60] (\x,0.35) -- (\x,0.65);
+    \foreach \x in {5,11,23,29} \fill[akcent!35] (\x,0.5) circle (2.3pt);
+    \fill[akcent] (17,0.5) circle (2.8pt);
+    \draw[->, thick] (15,-0.25) -- (15,0.33);
+    \node[anchor=north] at (15,-0.25) {punkt odniesienia};
+    \node[anchor=south, black!70] at (15,0.8) {$\pm$ pół strefy};
+    \draw[->, black!70] (0,-1.05) -- (31.2,-1.05);
+    \node[anchor=north] at (15,-1.5) {położenie [j.u.]};
+    \foreach \x in {0,5,...,30} {
+      \draw[black!70] (\x,-1.05) -- (\x,-1.12);
+      \node[anchor=north] at (\x,-1.12) {\x};
+    }
+  \end{tikzpicture}
+  \caption{Idea dekodowania położenia CPR w~jednym wymiarze, dla stref o~rozmiarach 6 i~5~jednostek umownych (j.u.): (a) dekodowanie globalne -- położenie wyznacza jedyny wspólny kandydat wiadomości parzystej i~nieparzystej, (b) dekodowanie lokalne -- położenie wyznacza kandydat leżący bliżej niż pół strefy od punktu odniesienia; kreski oznaczają granice stref, a~kropki -- możliwe położenia; opracowanie własne na podstawie~\cite{sun2021}}
+  \label{rys:cpr_idea}
+\end{figure}
+
+W~dekodowaniu globalnym wykorzystuje się parę wiadomości: parzystą i~nieparzystą. Strefy obu rodzajów wiadomości mają różne rozmiary, dlatego tylko jedno z~możliwych położeń wskazywanych przez wiadomość parzystą pokrywa się z~położeniem wskazywanym przez wiadomość nieparzystą (rysunek~\ref{rys:cpr_idea}a). Obie wiadomości powinny zostać odebrane w~krótkim odstępie czasu, w~praktyce nie dłuższym niż około \SI{10}{s}. Statek powietrzny nie może przy tym przekroczyć granicy stref, dla której zmienia się wartość $\operatorname{NL}$~\cite{sun2021}. W~dekodowaniu lokalnym wystarcza jedna wiadomość, jeżeli znane jest położenie odniesienia leżące bliżej niż pół strefy od rzeczywistego położenia (rysunek~\ref{rys:cpr_idea}b). Dla wiadomości nadawanych w~powietrzu warunek ten oznacza odległość mniejszą niż \SI{180}{NM}~\cite{sun2021}, co odpowiada połowie strefy szerokości geograficznej: $\ang{3} \cdot \SI[per-mode=symbol]{111.2}{\kilo\metre\per\degree} \approx \SI{333}{km}$. Punktem odniesienia jest zwykle wcześniej wyznaczone położenie statku powietrznego~\cite{sun2021}. W~przypadku odbiornika naziemnego może nim być również położenie odbiornika, o~ile statek powietrzny znajduje się w~odległości mniejszej niż \SI{180}{NM}.
+
+W~dekodowaniu globalnym oblicza się najpierw indeks strefy szerokości geograficznej, a~następnie szerokość geograficzną dla każdej z~wiadomości~\cite{sun2021}:
+\begin{equation}
+  j = \left\lfloor 59\,\varphi_{\mathrm{cpr},0} - 60\,\varphi_{\mathrm{cpr},1} + \frac{1}{2} \right\rfloor,
+  \qquad
+  \varphi_i = \Delta\varphi_i \bigl( \operatorname{mod}(j,\, 60 - i) + \varphi_{\mathrm{cpr},i} \bigr),
+  \label{eq:globalne}
+\end{equation}
+\begin{gdzie}
+  \item $j$ -- indeks strefy szerokości geograficznej,
+  \item $\varphi_i$ -- szerokość geograficzna wyznaczona z~wiadomości rodzaju $i$, w~stopniach,
+  \item $\operatorname{mod}(a, b)$ -- reszta z~dzielenia $a$ przez $b$, nieujemna dla $b > 0$.
+\end{gdzie}
+Wartości nie mniejsze niż \ang{270} odpowiadają półkuli południowej i~pomniejsza się je o~\ang{360}. Jako wynik przyjmuje się szerokość geograficzną obliczoną z~nowszej wiadomości pary~\cite{sun2021}. W~dekodowaniu lokalnym indeks strefy wyznacza się z~położenia odniesienia $\varphi_{\mathrm{ref}}$~\cite{sun2021}:
+\begin{equation}
+  j = \left\lfloor \frac{\varphi_{\mathrm{ref}}}{\Delta\varphi_i} \right\rfloor
+    + \left\lfloor \frac{\operatorname{mod}(\varphi_{\mathrm{ref}},\, \Delta\varphi_i)}{\Delta\varphi_i}
+    - \varphi_{\mathrm{cpr},i} + \frac{1}{2} \right\rfloor,
+  \qquad
+  \varphi = \Delta\varphi_i \left( j + \varphi_{\mathrm{cpr},i} \right).
+  \label{eq:lokalne}
+\end{equation}
+Długość geograficzną oblicza się w~obu metodach analogicznie, przy czym rozmiar strefy wynosi $\ang{360} / \max\bigl(\operatorname{NL}(\varphi) - i,\, 1\bigr)$ i~zależy od wyznaczonej wcześniej szerokości geograficznej~\cite{sun2021}.
+
+Przykładowo niech stacja bazowa znajduje się na szerokości geograficznej $\varphi_{\mathrm{ref}} = \ang{50.0}$, a~statek powietrzny na szerokości \ang{50.3169}, jak w~przykładzie z~podrozdziału~\ref{sec:model}. Wiadomość parzysta zawiera wówczas wartość $Y_0 = \num{50613}$, czyli $\varphi_{\mathrm{cpr},0} \approx \num{0.38615}$. Ze wzoru~\eqref{eq:lokalne} otrzymuje się $j = 8 + \lfloor \num{0.33333} - \num{0.38615} + \num{0.5} \rfloor = 8$ oraz $\varphi = \ang{6} \cdot (8 + \num{0.38615}) \approx \ang{50.31688}$. Wynik różni się od rzeczywistej szerokości geograficznej o~około \SI{2}{m}, co wynika z~rozdzielczości kodowania.
+
+Algorytm CPR nie gwarantuje poprawności każdego wyniku i~w~rzadkich przypadkach prowadzi do błędnego położenia. Z~tego powodu zaleca się sprawdzanie wiarygodności wyznaczonych położeń, np. przez porównanie ich z~zasięgiem odbiornika lub z~położeniami obliczonymi z~innych par wiadomości~\cite{sun2021}.
+
+
+%---------------------------------------------------------------------------
+\section{Odbiór sygnałów z~wykorzystaniem SDR}
+% =====================================================================
+
+
+\label{sec:sdr}
+
 Odpowiedzi Mode~S, w~tym ramki ADS-B, są przesyłane z~szybkością \SI{1}{Mbit/s}~\cite{sun2021}. Każda ramka rozpoczyna się preambułą o~czasie trwania \SI{8}{\micro\second}, po której następuje blok danych o~długości 56 lub \SI{112}{\micro\second}. Dane zakodowano za pomocą modulacji położenia impulsu (ang.~\textit{pulse position modulation}, PPM). Bit o~wartości 1 odpowiada impulsowi w~pierwszej połowie mikrosekundy, a~bit o~wartości 0 impulsowi w~drugiej połowie~\cite{sun2021}. Na rysunku~\ref{rys:ppm} przedstawiono początek ramki z~rysunku~\ref{rys:ramka_df17}.
 
 \begin{figure}[htbp]
@@ -226,17 +333,10 @@ Odpowiedzi Mode~S, w~tym ramki ADS-B, są przesyłane z~szybkością \SI{1}{Mbit
   \label{rys:ppm}
 \end{figure}
 
-% [ŹRÓDŁO] sun2021, rozdz. 2.3 "Receiver" (s. 26--27) -- SDR, RTL2832U, zakres 24--1766 MHz,
-%           próbkowanie 2,8 MS/s stabilnie, 3,2 MS/s niestabilnie, minimum 2 MS/s dla Mode S; tab. 2.1;
-%           rtlsdrv3 (karta katalogowa) -- pochodzenie z odbiorników DVB-T; rtlsdrv3www -- tuner R860 (R820T2), TCXO 1 ppm;
-%           dump1090 (README) -- 8-bitowe próbki I/Q.
 W~radiu definiowanym programowo (ang.~\textit{software-defined radio}, SDR) większość operacji przetwarzania sygnału, w~tym demodulację, wykonuje oprogramowanie. Część sprzętowa ogranicza się do odbioru sygnału, przeniesienia go na niższą częstotliwość i~próbkowania. Użytkownik wybiera programowo m.in. częstotliwość środkową odbiornika i~częstotliwość próbkowania~\cite{sun2021}. Najpopularniejszymi tanimi odbiornikami SDR są urządzenia RTL-SDR, zbudowane na układzie Realtek RTL2832U i~pierwotnie przeznaczone do odbioru telewizji cyfrowej DVB-T~\cite{sun2021,rtlsdrv3}. Ich zakres pracy obejmuje częstotliwości od \SI{24}{\mega\hertz} do \SI{1766}{\mega\hertz}. Maksymalna częstotliwość próbkowania wynosi \SI{3.2}{MS/s}, przy czym stabilną pracę uzyskuje się do około \SI{2.8}{MS/s}~\cite{sun2021}. Do odbioru ramek Mode~S wymagana jest częstotliwość próbkowania co najmniej \SI{2}{MS/s}, ponieważ impuls PPM trwa \SI{0.5}{\micro\second}~\cite{sun2021}. Odbiornik RTL-SDR Blog~V3 zawiera tuner R820T2 (oznaczany także jako R860) oraz generator kwarcowy z~kompensacją temperaturową o~stabilności \SI{1}{ppm}~\cite{rtlsdrv3www}. Próbki sygnału przekazuje do komputera przez interfejs USB w~postaci par wartości I/Q o~rozdzielczości 8~bitów~\cite{dump1090}.
-% [ŹRÓDŁO] sun2021, tab. 2.1 (s. 27) -- AirSpy R2, HackRF One, LimeSDR, BladeRF 2.
+
 Dostępne są także odbiorniki SDR o~szerszym zakresie częstotliwości, wyższej częstotliwości próbkowania i~z~możliwością nadawania, np. HackRF One i~LimeSDR~\cite{sun2021}. Wybór odbiornika dla stacji bazowej uzasadniono w rozdziale~\ref{chap:projekt}.
 
-% [ŹRÓDŁO] sun2021, rozdz. 2.4.1 "dump1090" (s. 27--28) -- autor, język C, rok 2013, licencja BSD, odmiany (FlightAware);
-%           dump1090 (README) -- próbki I/Q 2 MS/s, moduł próbek, CRC z korekcją 1 bitu, porty TCP 30002 i 30003, format SBS;
-%           sun2020pymodes / PyPI -- pyModeS: dekodowanie ADS-B, w tym CPR globalne i lokalne.
 Demodulację i~dekodowanie ramek wykonuje oprogramowanie. Najbardziej znanym otwartym dekoderem Mode~S jest program dump1090, napisany w~języku C przez Salvatore Sanfilippo i~udostępniony w~2013~roku na licencji BSD~\cite{sun2021}. Program pobiera z~odbiornika próbki I/Q z~częstotliwością \SI{2}{MS/s}, oblicza ich moduł, wyszukuje preambuły ramek, demoduluje bity PPM i~sprawdza sumę kontrolną, korygując pojedyncze błędy bitowe~\cite{dump1090}. W~trybie sieciowym dump1090 udostępnia przez protokół TCP ramki zapisane szesnastkowo (port~30002) oraz zdekodowane wiadomości w~tekstowym formacie SBS, nazywanym też formatem BaseStation (port~30003)~\cite{dump1090}. Program ma wiele odmian rozwijanych niezależnie, m.in. przez firmę FlightAware~\cite{sun2021}. Przebieg odbioru sygnału przedstawiono na rysunku~\ref{rys:tor_sdr}. Dekodowanie wiadomości ADS-B, w~tym położeń zakodowanych metodą CPR, umożliwia również biblioteka pyModeS dla języka Python~\cite{sun2020pymodes}.
 
 
@@ -273,13 +373,9 @@ Demodulację i~dekodowanie ramek wykonuje oprogramowanie. Najbardziej znanym otw
   \label{rys:tor_sdr}
 \end{figure}
 
-% [ŹRÓDŁO] sun2021, rozdz. 2.2 "Antenna" (s. 24--26) -- długość fali 27,5 cm, dipol 13,75 cm, antena lambda/4 6,875 cm,
-%           antena aktywna, LNA, bias tee; rtlsdrv3 (karta katalogowa) -- bias tee 4,5 V.
 Częstotliwości \SI{1090}{\mega\hertz} odpowiada długość fali $c/f \approx \SI{27.5}{cm}$, gdzie $c$ jest prędkością światła, a~$f$ częstotliwością fali. Do odbioru sygnałów ADS-B można zatem użyć prostych anten: dipola półfalowego o~całkowitej długości około \SI{13.8}{cm} albo anteny ćwierćfalowej z~przeciwwagą, której element odbiorczy ma długość około \SI{6.9}{cm}~\cite{sun2021}.
 Przy długim przewodzie antenowym sygnał o~tej częstotliwości jest silnie tłumiony. Stosuje się wtedy antenę aktywną ze wzmacniaczem niskoszumowym, zasilaną przez przewód antenowy za pośrednictwem układu \textit{bias tee}~\cite{sun2021}. Odbiornik RTL-SDR Blog~V3 ma wbudowany, włączany programowo układ \textit{bias tee} o~napięciu \SI{4.5}{V}~\cite{rtlsdrv3}.
 
-% [ŹRÓDŁO] sun2021, rozdz. 2.1 "Range" (s. 23--24), wzór (2.2) -- zasięg geometryczny, model Friisa.
-%           Obliczenie wysokości ok. 8,7 km i wniosek dotyczący dekodowania lokalnego -- własne.
 Sygnały o~częstotliwości \SI{1090}{\mega\hertz} rozchodzą się w~zasięgu wzroku, dlatego maksymalny zasięg odbioru wynika z~krzywizny Ziemi~\cite{sun2021}:
 \begin{equation}
   d = R_{\mathrm{Z}} \left( \arccos\frac{R_{\mathrm{Z}}}{R_{\mathrm{Z}} + h_{\mathrm{r}}}
@@ -294,21 +390,91 @@ Sygnały o~częstotliwości \SI{1090}{\mega\hertz} rozchodzą się w~zasięgu wz
 \end{gdzie}
 Rzeczywisty zasięg jest mniejszy, ponieważ zależy także od mocy nadajnika i~kierunkowości anten~\cite{sun2021}. Wzór~\eqref{eq:zasieg} ma jednak istotną konsekwencję dla dekodowania lokalnego. Dla anteny umieszczonej na poziomie morza ($h_{\mathrm{r}} = 0$) i~$R_{\mathrm{Z}} = \SI{6371}{km}$ teoretyczny zasięg przekracza \SI{180}{NM} (\SI{333}{km}) dla statków powietrznych lecących wyżej niż około \SI{8.7}{km}, czyli na typowych wysokościach przelotowych. Dla takich statków powietrznych dekodowanie lokalne z~położeniem odbiornika jako punktem odniesienia może prowadzić do wyboru niewłaściwej strefy (podrozdział~\ref{sec:cpr}).
 
+
 % ---------------------------------------------------------------------
 \section{Pozycja i~czas z~odbiornika GNSS}
-\label{sec:gnss}
-% (ok. 1,5 str.) Komunikaty NMEA GGA i RMC~\cite{nmea0183}, czas UTC,
-% układ WGS-84, wysokość nad poziomem morza a wysokość elipsoidalna.
+% =====================================================================
 
-% ---------------------------------------------------------------------
+
+\label{sec:gnss}
+Globalne systemy nawigacji satelitarnej (ang.~\textit{Global Navigation Satellite System}, GNSS) umożliwiają wyznaczenie położenia i~czasu w~dowolnym miejscu na Ziemi na podstawie sygnałów nadawanych przez satelity~\cite{hofmann2008}. Do systemów tych należą m.in. amerykański GPS, rosyjski GLONASS, europejski Galileo i~chiński BeiDou. Podstawowa konstelacja systemu GPS obejmuje 24~pozycje orbitalne rozmieszczone w~sześciu płaszczyznach orbit. Zapewnia to widoczność co najmniej czterech satelitów praktycznie z~każdego miejsca na Ziemi. W~praktyce utrzymuje się więcej satelitów, w~ostatnich latach około 31~\cite{gpsgov_space}.
+
+Satelity GNSS mają na pokładzie zegary atomowe i~nadają sygnały zawierające m.in. czas nadania oraz parametry swoich orbit. Odbiornik mierzy czas propagacji sygnału każdego satelity i~wyznacza tzw. pseudoodległość, czyli odległość obarczoną błędem wynikającym z~niedokładności własnego zegara~\cite{hofmann2008}.
+Dla satelity o~numerze $k$ pseudoodległość opisuje zależność~\cite{hofmann2008}
+\begin{equation}
+  p_k = \lVert \boldsymbol{s}_k - \boldsymbol{r} \rVert + c\,\Delta t_{\mathrm{odb}},
+  \label{eq:pseudoodleglosc}
+\end{equation}
+\begin{gdzie}
+  \item $p_k$ -- pseudoodległość do satelity $k$, w~metrach,
+  \item $\boldsymbol{s}_k$ -- wektor położenia satelity $k$, w~metrach,
+  \item $\boldsymbol{r}$ -- wektor położenia odbiornika, w~metrach,
+  \item $c$ -- prędkość światła, w~metrach na sekundę,
+  \item $\Delta t_{\mathrm{odb}}$ -- przesunięcie zegara odbiornika względem czasu systemu, w~sekundach.
+\end{gdzie}
+Niewiadomymi są trzy współrzędne odbiornika oraz przesunięcie jego zegara, dlatego do wyznaczenia pozycji potrzebne są pomiary z~co najmniej czterech satelitów. Ubocznym efektem obliczeń jest dokładna znajomość czasu, co pozwala wykorzystać odbiornik GNSS jako wzorzec czasu~\cite{hofmann2008}.
+
+Odbiorniki GNSS wyrażają położenie w~układzie odniesienia WGS-84, w~którym kształt Ziemi przybliżono elipsoidą obrotową~\cite{wgs84}. Położenie opisuje się szerokością geograficzną $\varphi$, długością geograficzną $\lambda$ i~wysokością nad elipsoidą $h$. Często podaje się jednak wysokość nad poziomem morza $H$, liczoną względem geoidy, czyli powierzchni ekwipotencjalnej pola siły ciężkości zbliżonej do średniego poziomu mórz. Obie wysokości wiąże zależność~\cite{hofmann2008}
+\begin{equation}
+  h \approx H + N,
+  \label{eq:wysokosci}
+\end{equation}
+\begin{gdzie}
+  \item $N$ -- odstęp geoidy od elipsoidy, w~metrach.
+\end{gdzie}
+Odstęp ten osiąga wartości rzędu kilkudziesięciu metrów, dlatego w~obliczeniach geometrycznych wszystkie wysokości należy odnosić do tej samej powierzchni.
+Odbiorniki GNSS przekazują wyniki najczęściej w~postaci tekstowych zdań standardu NMEA~0183, przesyłanych łączem szeregowym~\cite{nmea0183}. Każde zdanie rozpoczyna się znakiem \texttt{\$}, po którym następują dwuliterowy identyfikator nadawcy i~trzyliterowy typ zdania. Identyfikator \texttt{GP} oznacza dane z~systemu GPS, a~\texttt{GN} -- rozwiązanie wykorzystujące kilka systemów jednocześnie. Pola danych rozdziela się przecinkami. Zdanie kończą znak \texttt{*} i~dwucyfrowa szesnastkowa suma kontrolna, będąca wynikiem operacji XOR na kodach wszystkich znaków zawartych między \texttt{\$} a~\texttt{*}~\cite{gpsd_nmea}. Pola zdań GGA i~RMC zestawiono w~tabeli~\ref{tab:nmea}. Zdanie GGA zawiera m.in. wysokość nad poziomem morza i~odstęp geoidy od elipsoidy, co pozwala wyznaczyć wysokość nad elipsoidą ze wzoru~\eqref{eq:wysokosci}~\cite{gpsd_nmea}. Przykładowe zdania z~zaokrąglonymi współrzędnymi mają postać:
+\begin{center}
+  \small
+  \begin{tabular}{@{}l@{}}
+    \texttt{\$GPGGA,123519.00,5000.0000,N,02000.0000,E,1,08,0.9,250.0,M,40.0,M,,*64}\\
+    \texttt{\$GPRMC,123519.00,A,5000.0000,N,02000.0000,E,0.0,0.0,061126,,*3B}
+  \end{tabular}
+\end{center}
+
+\begin{table}[H]
+  \centering
+  \caption{Wybrane pola zdań GGA i~RMC standardu NMEA~0183 oraz ich wartości w~przykładowych zdaniach; opracowanie własne na podstawie~\cite{gpsd_nmea}}
+  \label{tab:nmea}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    Zdanie & Pole & Zawartość & Przykład \\
+    \midrule
+    GGA & 1      & czas UTC (hhmmss.ss)                         & 12:35:19,00 \\
+        & 2--3   & szerokość geograficzna (ddmm.mmmm, N/S)       & \ang{50.0} N \\
+        & 4--5   & długość geograficzna (dddmm.mmmm, E/W)        & \ang{20.0} E \\
+        & 6      & jakość wyznaczenia (0 -- brak, 1 -- GPS, 2 -- DGPS) & 1 \\
+        & 7      & liczba wykorzystanych satelitów               & 8 \\
+        & 8      & współczynnik HDOP                             & \num{0.9} \\
+        & 9--10  & wysokość nad poziomem morza, w~metrach        & \num{250.0} \\
+        & 11--12 & odstęp geoidy od elipsoidy, w~metrach         & \num{40.0} \\
+    \midrule
+    RMC & 1      & czas UTC (hhmmss.ss)                         & 12:35:19,00 \\
+        & 2      & status (A -- dane poprawne, V -- niepoprawne)  & A \\
+        & 3--6   & szerokość i~długość geograficzna              & jak w~GGA \\
+        & 7      & prędkość względem ziemi, w~węzłach            & \num{0.0} \\
+        & 8      & kąt drogi, w~stopniach                        & \num{0.0} \\
+        & 9      & data (ddmmyy)                                 & 6.11.2026 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Czas w~zdaniach NMEA jest podawany w~skali UTC, a~zdanie RMC zawiera także datę~\cite{gpsd_nmea}.
+Czas systemu GPS różni się od czasu UTC o~całkowitą liczbę sekund przestępnych, którą odbiornik uwzględnia przy podawaniu czasu UTC~\cite{hofmann2008}.
+Odbiornik GNSS może zatem służyć jako źródło czasu referencyjnego, niezależnego od zegara komputera. Sposób wykorzystania tego czasu do korekty znaczników czasu rejestrowanych danych opisano w~podrozdziale~\ref{sec:model}.
+
+
 % ---------------------------------------------------------------------
 \section{Środowisko ROS~2}
+% =====================================================================
 \label{sec:ros2}
-% (ok. 2 str.) Węzły, tematy, komunikaty, DDS, rosbag2 i format MCAP.
 
-Robot Operating System~2 (ROS~2) to zestaw bibliotek i~narzędzi wspierających budowę oprogramowania dla robotów. Mimo nazwy sugerującej system operacyjny stanowi on w~rzeczywistości warstwę oprogramowania (ang.~\textit{middleware}) uruchamianą na systemie operacyjnym Linux. ROS~2 zaprojektowano od nowa względem pierwszej wersji, m.in. z~myślą o~systemach wbudowanych, pracy w~czasie rzeczywistym i~komunikacji w~sieciach o~ograniczonej niezawodności~\cite{macenski2022}.
 
-Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależnych jednostek programu realizujących wydzielone zadania~\cite{ros2jazzy}. Węzły wymieniają dane głównie przez tematy (ang.~\textit{topic}) za pomocą modelu publikacji oraz subskrypcji. Węzeł publikujący wysyła komunikaty (ang.~\textit{message}) do nazwanego tematu, nie wiedząc, kto je odbiera. Każdy węzeł subskrybujący dany temat otrzymuje każdy opublikowany w~nim komunikat~\cite{ros2jazzy}. Jeden temat może mieć wielu nadawców i~wielu odbiorców, co przedstawiono na rysunku~\ref{rys:ros2_graf}.
+Robot Operating System~2 (ROS~2) to zestaw bibliotek i~narzędzi do tworzenia oprogramowania robotów~\cite{ros2jazzy}. Mimo nazwy nie jest to system operacyjny, lecz platforma programistyczna, której podstawę stanowi warstwa pośrednicząca w~komunikacji między elementami aplikacji (ang.~\textit{middleware})~\cite{macenski2022}. ROS~2 działa w~systemie operacyjnym komputera, a~większość jego ekosystemu rozwija się wokół systemu Linux~\cite{ye2023realtime}. W~stosunku do pierwszej wersji ROS~2 zaprojektowano od nowa, m.in. z~myślą o~systemach wbudowanych, pracy w~czasie rzeczywistym i~komunikacji w~sieciach o~ograniczonej niezawodności~\cite{macenski2022}.
+
+Oprogramowanie ROS~2 jest wydawane w~dystrybucjach. W~pracy wykorzystano dystrybucję Jazzy Jalisco, wydaną w~maju 2024~roku jako wersja o~wydłużonym okresie wsparcia, trwającym do maja 2029~roku. Najwyższy poziom wsparcia ma ona w~systemach Ubuntu~24.04, zarówno dla procesorów amd64, jak i~arm64, oraz Windows~10~\cite{ros2jazzyrelease}.
+
+Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależnych jednostek programu realizujących wydzielone zadania~\cite{ros2jazzy}. Węzły wymieniają dane głównie przez tematy (ang.~\textit{topic}) w~modelu publikacji i~subskrypcji. Węzeł publikujący wysyła komunikaty (ang.~\textit{message}) do nazwanego tematu, nie wiedząc, kto je odbiera. Węzły subskrybujące dany temat otrzymują publikowane w~nim komunikaty, przy czym gwarancja ich dostarczenia zależy od ustawień jakości usługi, omówionych w~dalszej części podrozdziału~\cite{ros2jazzy}. Jeden temat może mieć wielu nadawców i~wielu odbiorców, co przedstawiono na rysunku~\ref{rys:ros2_graf}.
 
 \begin{figure}[H]
   \centering
@@ -329,20 +495,53 @@ Aplikacja w~ROS~2 składa się z~węzłów (ang.~\textit{node}), czyli niezależ
     \draw[->, thick] (t.east) -- (r.west);
     \draw[->, thick] (r) -- node[above] {zapis} (f);
   \end{tikzpicture}
-  \caption{Komunikacja węzłów ROS~2 przez temat w~modelu publikacja--subskrypcja; węzły oznaczono elipsami, a~temat -- prostokątem; opracowanie własne}
+  \caption{Komunikacja węzłów ROS~2 przez temat w~modelu publikacja--subskrypcja; węzły oznaczono elipsami, a~temat -- prostokątem; rejestrator rosbag2 i~format MCAP omówiono w~dalszej części podrozdziału; opracowanie własne}
   \label{rys:ros2_graf}
 \end{figure}
 
-Komunikację między węzłami realizuje warstwa pośrednia zgodna ze standardem DDS (ang.~\textit{Data Distribution Service}). Odpowiada ona za automatyczne wykrywanie węzłów w~sieci, bez centralnego serwera, oraz za przesyłanie danych~\cite{macenski2022}. Dzięki rozproszonemu wykrywaniu węzły uruchomione na różnych komputerach w~tej samej sieci mogą wymieniać komunikaty bez dodatkowej konfiguracji.
+Komunikację między węzłami realizuje warstwa pośrednia zgodna ze standardem DDS (ang.~\textit{Data Distribution Service}). Odpowiada ona za automatyczne wykrywanie węzłów w~sieci, bez centralnego serwera, oraz za przesyłanie danych~\cite{macenski2022}. Domyślną implementacją DDS w~dystrybucji Jazzy jest eProsima Fast DDS~\cite{ros2jazzy}. Dzięki rozproszonemu wykrywaniu węzły uruchomione na różnych komputerach w~tej samej sieci mogą wymieniać komunikaty bez dodatkowej konfiguracji, o~ile mają ten sam identyfikator domeny, ustawiany zmienną środowiskową \texttt{ROS\_DOMAIN\_ID}. Przypisanie różnych identyfikatorów pozwala oddzielić od siebie grupy węzłów pracujące w~jednej sieci~\cite{ros2jazzy}.
 
-Strukturę komunikatu opisuje plik interfejsu z~rozszerzeniem \texttt{.msg}, w~którym wymienia się pola i~ich typy~\cite{ros2jazzy}. Na tej podstawie narzędzia ROS~2 generują kod obsługujący komunikat w~językach C++ i~Python. Dostępne są standardowe typy komunikatów, np. \texttt{sensor\_msgs/NavSatFix}, przeznaczony do przekazywania pozycji z~odbiornika GNSS, oraz \texttt{sensor\_msgs/TimeReference}, przeznaczony do przekazywania czasu z~zewnętrznego źródła~\cite{ros2jazzy}. Wiele typów komunikatów zawiera nagłówek ze znacznikiem czasu i~nazwą układu współrzędnych, do którego odnoszą się dane. Gdy żaden typ standardowy nie odpowiada potrzebom, można zdefiniować własny typ komunikatu.
+Sposób przesyłania komunikatów określają ustawienia jakości usługi (ang.~\textit{quality of service}, QoS)~\cite{ros2jazzy}. Należą do nich m.in. niezawodność dostarczania oraz historia. W~trybie niezawodnym utracone komunikaty są wysyłane ponownie, a~w~trybie \textit{best effort} nie są. Historia określa liczbę komunikatów przechowywanych w~kolejce, nazywaną głębokością kolejki. Gdy kolejka jest pełna, najstarsze komunikaty są usuwane. Ustawienia nadawcy i~odbiorcy muszą być zgodne, w~przeciwnym razie połączenie między nimi nie powstaje~\cite{ros2jazzy}.
 
-Do rejestracji danych służy narzędzie rosbag2, które zapisuje komunikaty wybranych tematów do pliku wraz ze znacznikami czasu i~pozwala je później odtworzyć~\cite{ros2jazzy}. Odtwarzane komunikaty są publikowane w~tych samych tematach, dlatego węzły przetwarzające dane działają tak samo jak podczas pracy na żywo. Podczas odtwarzania można publikować również zegar odpowiadający czasowi nagrania, dzięki czemu węzły posługują się czasem zapisu zamiast czasem bieżącym~\cite{ros2jazzy}. Od dystrybucji Iron, wydanej w maju 2023 roku domyślnym formatem zapisu jest MCAP. Plik w~tym formacie zawiera schematy zapisanych komunikatów, dzięki czemu można go odczytać także bez zainstalowanych definicji typów komunikatów~\cite{mcap}.
+Opóźnienie przesyłania komunikatu między węzłami nie jest stałe. Zależy ono m.in. od implementacji DDS, rozmiaru komunikatu i~ustawień QoS. Dla małych komunikatów przesyłanych między węzłami działającymi na jednym komputerze jest ono rzędu ułamka milisekundy~\cite{ye2023realtime,kronauer2021latency}. Narzut samego ROS~2 w~stosunku do bezpośredniego użycia DDS może sięgać 50\,\% dla małych komunikatów, a~tryb niezawodny zwiększa opóźnienie o~kilkanaście procent w~porównaniu z~trybem \textit{best effort}~\cite{kronauer2021latency}.
+
+Strukturę komunikatu opisuje plik interfejsu z~rozszerzeniem \texttt{.msg}, w~którym wymienia się pola i~ich typy~\cite{ros2jazzy}. Na tej podstawie narzędzia ROS~2 generują kod obsługujący komunikat w~językach C++ i~Python. Dostępne są standardowe typy komunikatów, np. \texttt{sensor\_msgs/NavSatFix}, przeznaczony do przekazywania pozycji z~odbiornika GNSS, oraz \texttt{sensor\_msgs/TimeReference}, przeznaczony do przekazywania czasu z~zewnętrznego źródła~\cite{ros2jazzy}. Gdy żaden typ standardowy nie odpowiada potrzebom, można zdefiniować własny typ komunikatu. Wiele typów komunikatów zawiera nagłówek ze znacznikiem czasu i~nazwą układu współrzędnych, do którego odnoszą się dane~\cite{ros2jazzy}. Znacznik czasu nadaje węzeł publikujący. Domyślnie jest to czas zegara systemowego komputera, na którym działa węzeł, a~po ustawieniu parametru \texttt{use\_sim\_time} -- czas publikowany w~temacie \texttt{/clock}~\cite{ros2jazzy}. Dokładność znaczników czasu zależy zatem od synchronizacji zegara komputera, co uwzględniono w~modelu opisanym w~podrozdziale~\ref{sec:model}.
+
+Do rejestracji danych służy narzędzie rosbag2, które zapisuje komunikaty wybranych tematów do pliku wraz ze znacznikami czasu i~pozwala je później odtworzyć~\cite{ros2jazzy}. Odtwarzane komunikaty są publikowane w~tych samych tematach, dlatego węzły przetwarzające dane działają tak samo jak podczas pracy na żywo. Podczas odtwarzania można publikować również zegar odpowiadający czasowi nagrania. Węzły z~ustawionym parametrem \texttt{use\_sim\_time} posługują się wtedy czasem zapisu zamiast czasem bieżącym~\cite{ros2jazzy}. Od dystrybucji Iron, wydanej w~maju 2023~roku, domyślnym formatem zapisu jest MCAP, który zastąpił stosowany wcześniej format SQLite3~\cite{ros2iron}. Plik MCAP zawiera definicje zapisanych komunikatów, dzięki czemu można go odczytać także bez zainstalowanych definicji typów komunikatów~\cite{ros2iron,mcap}.
+
 
 % ---------------------------------------------------------------------
 \section{Istniejące rozwiązania}
+% =====================================================================
 \label{sec:istniejace}
-% (ok. 2 str.) OpenSky~\cite{schafer2014}, FlightAware, Flightradar24;
-% ADS-B jako dane referencyjne w wizji komputerowej (Zhang i in. 2022 -
-% dodać do bibliography.bib). Zalety i wady podejść, czego brakuje
-% (przenośność, czas GPS, ROS 2) -> uzasadnienie tej pracy.
+
+
+Odbiór sygnałów ADS-B za pomocą tanich odbiorników SDR jest powszechny, a~budowa własnego odbiornika jest popularnym projektem hobbystycznym. Typowy odbiornik składa się z~anteny, odbiornika RTL-SDR i~dekodera, np. programu dump1090~\cite{sun2021}, uruchamianego często na komputerze jednopłytkowym Raspberry Pi~\cite{fr24build,piaware}. Odebrane statki powietrzne wyświetla się zwykle na mapie w~przeglądarce internetowej, a~zdekodowane dane są dostępne przez porty TCP programu dump1090~\cite{dump1090}. Takie odbiorniki służą przede wszystkim do obserwacji ruchu lotniczego w~okolicy. Dane nie są w~nich udostępniane jako komunikaty środowiska ROS~2, a~w~podstawowej konfiguracji nie są też zapisywane do plików.
+
+Odbiorniki budowane przez hobbystów często przekazują dane do serwisów śledzenia lotów. Serwis Flightradar24 udostępnia instrukcję budowy odbiornika złożonego z~komputera Raspberry Pi, odbiornika ADS-B w~postaci przystawki USB oraz anteny. Na komputerze instaluje się przygotowany przez serwis obraz systemu Pi24, oparty na systemie Raspbian Lite, a~odbiornik automatycznie przesyła odebrane dane do serwisu. Według serwisu zasięg takiego odbiornika wynosi od 200 do 400~mil, czyli od około 320 do \SI{640}{km}. W~zamian za udostępnianie danych użytkownik otrzymuje bezpłatny dostęp do płatnego planu subskrypcji~\cite{fr24build}. Podobnie działa oprogramowanie PiAware, które na komputerze Raspberry Pi dekoduje wiadomości ADS-B, wyświetla je na lokalnej mapie i~przesyła do serwisu FlightAware. Jego użytkownicy otrzymują bezpłatne konto z~rozszerzonym dostępem do danych serwisu~\cite{piaware}.
+
+Przykładem rozwiązania naukowego jest OpenSky Network, czyli sieć odbiorników naziemnych, która gromadzi surowe wiadomości Mode~S i~ADS-B w~centralnej bazie danych i~udostępnia je do celów badawczych~\cite{schafer2014}. Wszystkie opisane sieci są nastawione na gromadzenie danych z~wielu odbiorników w~jednym miejscu. Do przesyłania danych wymagają połączenia z~internetem, a~dane udostępniają przez własne serwisy.
+
+Dane ADS-B wykorzystuje się także w~badaniach nad wizyjnym wykrywaniem statków powietrznych. Zhang i~in.~\cite{zhang2022sta} zaproponowali sieć neuronową do segmentacji statków powietrznych w~nagraniach wideo z~lotniska. Położenie odczytane z~wiadomości ADS-B służy w~niej jako informacja wstępna, która ułatwia śledzenie obiektów w~długich sekwencjach. W~zbiorze danych TartanAviation~\cite{patrikar2025tartan} zarejestrowano obrazy z~kamer zamontowanych na stałe w~obrębie lotnisk wraz z~danymi ADS-B z~własnych odbiorników. Położenia statków powietrznych interpolowano do częstotliwości rejestracji obrazu, wynoszącej \SI{24}{\hertz}, i~rzutowano na obraz za pomocą skalibrowanego modelu kamer. Rzutowane położenia posłużyły do odrzucania błędnych wykryć i~wskazania przybliżonego położenia statku powietrznego na obrazie, a~etykiety sprawdzono następnie ręcznie~\cite{patrikar2025tartan}. Przykłady te pokazują, że do automatycznego etykietowania obrazów potrzebne są zsynchronizowany czas, znane położenie odbiornika i~kamery oraz wiarygodne położenia statków powietrznych.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Porównanie odbiorników ADS-B o~różnym przeznaczeniu; opracowanie własne na podstawie~\cite{fr24build,piaware,schafer2014,dump1090}}
+  \label{tab:rozwiazania}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{3.9cm}>{\raggedright\arraybackslash}p{3.9cm}>{\raggedright\arraybackslash}p{3.9cm}@{}}
+    \toprule
+    Cecha & Sieci odbiorników (Flightradar24, FlightAware, OpenSky) & Odbiornik hobbystyczny z~programem dump1090 & Stacja bazowa (niniejsza praca) \\
+    \midrule
+    Przeznaczenie & gromadzenie danych z~wielu odbiorników i~ich udostępnianie & obserwacja ruchu lotniczego w~okolicy odbiornika & źródło danych referencyjnych w~terenie \\
+    \addlinespace
+    Połączenie z~internetem & wymagane do przesyłania danych & niewymagane & niewymagane \\
+    \addlinespace
+    Postać udostępnianych danych & serwis internetowy lub baza danych & mapa w~przeglądarce, porty TCP & komunikaty ROS~2 w~czasie rzeczywistym \\
+    \addlinespace
+    Zapis danych & centralnie, w~serwisie & brak w~podstawowej konfiguracji & lokalnie, pliki rosbag2 w~formacie MCAP \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Cechy omówionych odbiorników zestawiono w~tabeli~\ref{tab:rozwiazania}. W~przeanalizowanych rozwiązaniach nie znaleziono przenośnego systemu, który w~warunkach polowych, bez dostępu do internetu, wyznaczałby położenia statków powietrznych względem własnej pozycji ustalonej przez odbiornik GNSS i~udostępniał je w~czasie rzeczywistym jako komunikaty środowiska ROS~2. Wymagania stawiane takiemu systemowi sformułowano w~podrozdziale~\ref{sec:wymagania_referencja}.
