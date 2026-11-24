@@ -1,0 +1,151 @@
+% =====================================================================
+%  5. WARSTWA PROGRAMOWA STACJI BAZOWEJ  (dawne 40_Implementation.tex)
+%  Objętość: ok. 13 stron - największy rozdział (własna praca).
+% =====================================================================
+\chapter{Warstwa programowa stacji bazowej}
+\label{chap:oprogramowanie}
+
+% 2-3 zdania: co jest w tym rozdziale.
+
+% ---------------------------------------------------------------------
+\section{Środowisko uruchomieniowe}
+\label{sec:srodowisko}
+% (ok. 2 str.) Ubuntu, Docker (obraz, kontener, compose), usługi systemd,
+% dump1090 na hoście (porty 30002 i 30003).
+
+% ---------------------------------------------------------------------
+\section{Węzły akwizycji danych}
+\label{sec:akwizycja}
+% (ok. 2 str.) sdr_node (dwa połączenia TCP, buforowanie linii,
+% automatyczne ponowne łączenie), gps_node, power_monitor_node.
+% ======================================================================
+% rys_schemat_pozycja.tex – schemat blokowy wyznaczania pozycji statku
+% powietrznego w module adsb_decoder.py (metoda _update_position)
+% Wstawić w rozdziale 4 (Implementacja) poleceniem: \input{tex/rys_schemat_pozycja}
+% Wymaga w preambule: tikz + biblioteki positioning, arrows.meta, calc,
+%                     shapes.geometric (diamond, trapezium); siunitx; kolor akcent.
+% Odwołuje się do tabeli tab:tablica_pozycja (plik tab_tablica_pozycja.tex).
+% Treść zgodna z kodem w repozytorium (commit 33bb6ff).
+% Kod TikZ przygotowano z wykorzystaniem Claude (Anthropic) – zob. deklarację AI.
+% ======================================================================
+\begin{figure}[!htb]
+\centering
+\begin{tikzpicture}[
+    font=\scriptsize,
+    >={Stealth[length=2mm]},
+    term/.style={draw, thick, rounded corners=3.5mm, fill=akcent!25,
+                 minimum height=7mm, minimum width=22mm, align=center},
+    we/.style={draw, thick, trapezium, trapezium left angle=70,
+               trapezium right angle=110, fill=black!8, align=center,
+               minimum height=9mm, inner xsep=4mm, text width=40mm},
+    op/.style={draw, thick, fill=akcent!10, align=center,
+               minimum height=8mm, text width=54mm, inner sep=3pt},
+    odrz/.style={draw, thick, fill=akcent!10, align=center,
+                 minimum height=8mm, text width=31mm, inner sep=3pt},
+    dec/.style={draw, thick, diamond, aspect=2.6, fill=white, align=center,
+                inner sep=0pt, text width=42mm},
+    strz/.style={->, thick},
+    tn/.style={font=\scriptsize\bfseries, inner sep=1.5pt},
+]
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+% ---------------- główna ścieżka ----------------
+\node[term] (start) at (0, 0) {START};
+\node[we]   (wej)   at (0,-1.35) {Ramka DF17 z~pozycją, czas $t$};
+\node[dec]  (d0)    at (0,-3.2) {Znana pozycja stacji?};
+\node[op]   (opl)   at (0,-5.3)
+     {$L\leftarrow$ pozycja lokalna z~jednej ramki (odniesienie: stacja)};
+\node[op]   (opg)   at (0,-6.8)
+     {$G\leftarrow$ pozycja globalna z~pary ramek (PipeDecoder) lub brak};
+\node[op]   (tab)   at (0,-8.3)
+     {Ustal $P$ i~$Q$ według tablicy decyzyjnej (tabela~\ref{tab:tablica_pozycja})};
+\node[dec]  (d1)    at (0,-10.3) {Ustalono pozycję $P$?};
+\node[dec]  (d2)    at (0,-13.1)
+     {Stacja znana i~$P$ dalej niż \SI{450}{km} od stacji?};
+\node[dec]  (d3)    at (0,-16.5)
+     {Skok od poprzedniej pozycji $>\SI{600}{m/s}\cdot\Delta t+\SI{1}{km}$
+      i~$Q\neq$ VERIFIED?};
+\node[op]   (zap)   at (0,-19.0) {Zapisz $P$, $Q$ oraz czas pozycji $t$};
+\node[term] (konz)  at (0,-20.3) {KONIEC};
+
+% ---------------- gałąź „brak pozycji stacji” ----------------
+\node[op, text width=26mm] (lbrak) at (6.2,-3.2) {$L\leftarrow$ brak};
+
+% ---------------- odrzucenia po prawej ----------------
+\node[odrz] (r1) at (6.2,-10.3) {Odrzuć: brak pozycji lub niezgodne $L$ i~$G$};
+\node[term] (k1) at (9.6,-10.3) {KONIEC};
+\node[odrz] (r2) at (6.2,-13.1) {Odrzuć: poza zasięgiem};
+\node[term] (k2) at (9.6,-13.1) {KONIEC};
+\node[odrz] (r3) at (6.2,-16.5) {Odrzuć: nierealny skok pozycji};
+\node[term] (k3) at (9.6,-16.5) {KONIEC};
+
+% ---------------- strzałki: główna ścieżka ----------------
+\draw[strz] (start) -- (wej);
+\draw[strz] (wej) -- (d0);
+\draw[strz] (d0) -- node[tn, right=1mm] {TAK} (opl);
+\draw[strz] (d0) -- node[tn, above, pos=0.35] {NIE} (lbrak);
+\draw[strz] (opl) -- (opg);
+\draw[strz] (lbrak.south) |- (opg.east);
+\draw[strz] (opg) -- (tab);
+\draw[strz] (tab) -- (d1);
+\draw[strz] (d1) -- node[tn, right=1mm] {TAK} (d2);
+\draw[strz] (d2) -- node[tn, right=1mm] {NIE} (d3);
+\draw[strz] (d3) -- node[tn, right=1mm] {NIE} (zap);
+\draw[strz] (zap) -- (konz);
+
+% ---------------- strzałki: odrzucenia ----------------
+\draw[strz] (d1) -- node[tn, above, pos=0.3] {NIE} (r1);
+\draw[strz] (r1) -- (k1);
+\draw[strz] (d2) -- node[tn, above, pos=0.3] {TAK} (r2);
+\draw[strz] (r2) -- (k2);
+\draw[strz] (d3) -- node[tn, above, pos=0.3] {TAK} (r3);
+\draw[strz] (r3) -- (k3);
+\end{tikzpicture}
+\caption{Schemat blokowy wyznaczania pozycji statku powietrznego w~module
+\texttt{adsb\_decoder.py}. Symbole: owal -- początek i~koniec algorytmu,
+równoległobok -- dane wejściowe, prostokąt -- operacja, romb -- decyzja
+z~wyjściami TAK i~NIE. Oznaczenia: $L$ -- pozycja wyznaczona metodą lokalną,
+$G$ -- metodą globalną, $P$ -- pozycja wynikowa, $Q$ -- jakość pozycji
+(LOCAL, GLOBAL lub VERIFIED), $\Delta t$ -- czas od poprzedniej pozycji tego
+statku. Schemat obejmuje etap następujący po odfiltrowaniu ramek, które nie
+są ramkami DF17 lub mają błędną sumę CRC}
+\label{rys:schemat_pozycja}
+\end{figure}
+
+
+
+
+%\begin{lstlisting}[language=Python, caption={Dzielenie strumienia TCP na linie SBS}, %label={lst:linie}]
+%self.buffer += data
+%while b'\n' in self.buffer:
+%    line, self.buffer = self.buffer.split(b'\n', 1)
+%    # publikujemy tylko komunikaty zaczynające się od MSG
+%\end{lstlisting}
+
+%Na listingu~\ref{lst:linie} pokazano\ldots
+% TODO: zaktualizuj listing do bieżącej wersji sdr_node.py (klasa TcpLineClient).
+
+% ---------------------------------------------------------------------
+\section{Dekodowanie ADS-B w~czasie rzeczywistym}
+\label{sec:dekodowanie}
+% (ok. 3,5 str.) Moduł adsb_decoder, węzeł decoder_node, dwie metody
+% pozycji (lokalna z pozycją stacji, globalna z pary ramek), statusy
+% LOCAL/GLOBAL/VERIFIED, kontrole wiarygodności, wyznaczanie odległości,
+% azymutu i elewacji, publikacja AircraftState.
+
+% ---------------------------------------------------------------------
+\section{Rejestracja danych}
+\label{sec:rejestracja}
+% (ok. 2 str.) rosbag2 + MCAP, sesje nazywane czasem UTC, pliki co
+% 10 min, odzyskiwanie po utracie zasilania (reindex).
+
+% ---------------------------------------------------------------------
+\section{Interfejs użytkownika}
+\label{sec:interfejs}
+% (ok. 1,5 str.) display_node (układ ekranu, kolory jakości pozycji,
+% wskaźnik REC), skrypt przycisku zasilania.
+
+% ---------------------------------------------------------------------
+\section{Uruchamianie i~zamykanie systemu}
+\label{sec:start_stop}
+% (ok. 2 str.) start_nodes.sh, sygnały SIGTERM/SIGINT, trap, grupy
+% procesów, SIGTTIN; napotkane problemy i ich rozwiązania.

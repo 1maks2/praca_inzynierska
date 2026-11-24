@@ -1,53 +1,52 @@
-\documentclass[twoside,a4paper,12pt]{article}
+% =====================================================================
+%  Projekt dyplomowy (praca inżynierska) – WEAIiIB AGH
+%  Szablon zgodny z "Zasadami dyplomowania" (Decyzja Dziekana nr 6/2023)
+%  Kompilator w Overleaf: pdfLaTeX  (Menu -> Settings -> Compiler)
+%  Wersja 2026-10-29: nowy układ rozdziałów (warstwa sprzętowa / programowa)
+% =====================================================================
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage[polish]{babel}
-\usepackage{graphicx}
-\usepackage{listings}
-\input{tex/00_preambule.tex}
+% report  -> mamy \chapter (rozdziały), potrzebne w pracy dyplomowej
+% twoside -> marginesy lustrzane: nieparzyste L=3cm, parzyste P=3cm
+% openany -> rozdział zaczyna się na następnej stronie (bez pustych stron)
+\documentclass[a4paper,12pt,twoside,openany]{report}
 
-\author{Maksymilian Stach}
-\title{Przenośny system logowania pozycji statków powietrznych w ROS 2.0 na podstawie transponderów ADS-B}
-\setDepartment{Wydział Elektrotechniki, Automatyki, Informatyki i Inżynierii Biomedycznej}
-\setFaculty{Automatyka i Robotyka}
-\setSupervisor{dr inż. Mateusz Komorkiewicz}
-\setReviewer{dr inż. recenzent}
+\input{tex/00_preamble}          % pakiety, marginesy, czcionka, odstępy
+
+% ------------------- DANE NA STRONĘ TYTUŁOWĄ ------------------------
+% Tytuł MUSI być identyczny z tematem zatwierdzonym w USOS-APD!
+\newcommand{\tytulPL}{Przenośny system logowania pozycji statków powietrznych w ROS 2.0 na podstawie transponderów ADS-B}
+\newcommand{\tytulEN}{Portable aircraft position logging system in ROS 2.0 based on ADS-B transponders}
+\newcommand{\autor}{Maksymilian Stach}
+\newcommand{\kierunek}{Automatyka i Robotyka}
+\newcommand{\opiekun}{dr inż. Mateusz Komorkiewicz}
+\newcommand{\rok}{2027}           % rok kalendarzowy złożenia pracy
+
+\hypersetup{pdftitle={\tytulPL}, pdfauthor={\autor}}
 
 \begin{document}
-\pagestyle{empty}
 
-\maketitle
+% ---------------------- STRONA TYTUŁOWA -----------------------------
+\input{tex/01_titlePage}
 
-\input{tex/02_StudentDeclaration}
-\input{tex/03_MasterThesisOutline}
-\null
-\newpage
-\null
-\newpage
-
-\pagestyle{plain}
-\linespread{1.3}
-\selectfont
-
-\newpage
-\pagenumbering{roman}
+% ------------------------- SPIS TREŚCI ------------------------------
 \tableofcontents
-\newpage
-\thispagestyle{empty}
-\mbox{}
-\newpage
+\cleardoublepage
 
-\pagenumbering{arabic}
+% --------------------------- ROZDZIAŁY ------------------------------
+\include{tex/10_introduction}           % 1. Wstęp: motywacja, cel, zakres, układ
+\include{tex/20_Theory}                 % 2. ADS-B, CPR, SDR, GNSS, ROS 2, istniejące rozwiązania
+\include{tex/30_System_Project}         % 3. Wymagania, architektura, tematy, model (35_Model)
+\include{tex/40_Hardware}               % 4. Warstwa sprzętowa stacji bazowej
+\include{tex/45_Software}               % 5. Warstwa programowa stacji bazowej
+\include{tex/50_Research_and_testing}   % 6. Badania stacji bazowej
+\include{tex/99_Conclusion}             % 7. Podsumowanie i wnioski
 
-\include{tex/10_introduction}
-\include{tex/20_Theory}
-\include{tex/30_System_Project}
-\include{tex/40_Implementation}
-\include{tex/50_Reaserch_and_testing}
-\include{tex/99_Conclusion}
+% -------------------------- LITERATURA ------------------------------
+\bibliographystyle{unsrt}        % numeracja w kolejności cytowania
+\bibliography{bibliography}      % plik bibliography.bib
 
-\addcontentsline{toc}{section}{Literatura}
-\bibliography{bibliography.bib}
-\bibliographystyle{plain}
+% --------------------------- ZAŁĄCZNIKI -----------------------------
+\appendix
+\include{tex/A_Appendix}
+
 \end{document}

@@ -1,0 +1,108 @@
+% =====================================================================
+%  00_preamble.tex – ustawienia wyglądu zgodne z Zasadami dyplomowania
+%  WEAIiIB AGH, rozdz. XI "Założenia edytorskie"
+% =====================================================================
+
+% --- Kodowanie i język polski ---------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+
+% --- Czcionka: Times New Roman 12 pt (wymóg) ------------------------
+% newtxtext/newtxmath = Times dla tekstu i wzorów matematyczny-ch
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+\usepackage{amsmath}
+% --- Marginesy (wymóg) -----------------------------------------------
+% strony nieparzyste: lewy 3 cm, pozostałe 2 cm
+% strony parzyste:    prawy 3 cm, pozostałe 2 cm
+% przy opcji twoside: inner = margines od strony grzbietu
+\usepackage[a4paper,
+            inner=3cm, outer=2cm,
+            top=2cm,   bottom=2cm,
+            footskip=1cm]{geometry}
+
+% --- Odstęp między wierszami: 1,25 wiersza (wymóg) -------------------
+% W Wordzie "1,25 wiersza" dla Times 12 pt to ok. 17,3 pt między liniami.
+% LaTeX dla 12 pt ma domyślnie 14,5 pt, więc współczynnik 1.2 daje ten sam efekt.
+\usepackage{setspace}
+\setstretch{1.2}
+
+% --- Akapity ---------------------------------------------------------
+\usepackage{indentfirst}          % wcięcie także w 1. akapicie (polski zwyczaj)
+\setlength{\parindent}{1.25cm}
+\usepackage{microtype}            % ładniejsze dzielenie i justowanie
+
+% --- Nagłówki rozdziałów: "1. Wstęp" zamiast "Rozdział 1" -----------
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]{\normalfont\LARGE\bfseries}{\thechapter.}{0.5em}{}
+\titlespacing*{\chapter}{0pt}{0pt}{1.5em}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection.}{0.5em}{}
+
+% --- Numery stron: na dole, po zewnętrznej stronie --------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[LE,RO]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[LE,RO]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}  % strony z początkiem rozdziału
+\usepackage{emptypage}           % puste strony wstawiane przez \cleardoublepage – bez numeru
+
+% --- Grafika, tabele, podpisy ----------------------------------------
+\usepackage{graphicx}
+\graphicspath{{img/}}             % obrazki szukane w katalogu img/
+\usepackage{booktabs}             % ładne tabele (\toprule, \midrule ...)
+\usepackage{float}                % opcja [H] – obrazek dokładnie tutaj
+\usepackage[font=small,labelfont=bf,labelsep=period]{caption}
+\usepackage{siunitx}              % jednostki: \SI{1090}{\mega\hertz}
+\sisetup{output-decimal-marker={,}}
+\usepackage{enumitem}             % kontrola wyglądu list
+% Listy (punktowane i numerowane): znak listy na wysokości wcięcia
+% akapitu (1,25 cm), tekst zaraz za nim - jednakowo w całej pracy
+\setlist[itemize,enumerate]{labelindent=\parindent, leftmargin=*}
+\setlist{itemsep=0pt}
+
+% --- Kod źródłowy (Python, bash, YAML) -------------------------------
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small\linespread{1.0}\selectfont,
+  numbers=left, numberstyle=\tiny, numbersep=8pt,
+  xleftmargin=2em, framexleftmargin=1.5em,
+  frame=single, breaklines=true, columns=fullflexible,
+  keywordstyle=\color{blue!60!black}\bfseries,
+  commentstyle=\color{green!40!black}\itshape,
+  stringstyle=\color{red!60!black},
+  showstringspaces=false, tabsize=4,
+  captionpos=b,
+  % polskie znaki w kodzie (pdfLaTeX):
+  literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1
+           {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1
+           {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L{}}}1
+           {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ź}{{\'Z}}1 {Ż}{{\.Z}}1
+}
+\renewcommand{\lstlistingname}{Listing}
+\renewcommand{\lstlistlistingname}{Spis listingów}
+
+% --- Literatura i spis treści ----------------------------------------
+\usepackage[nottoc]{tocbibind}    % "Literatura" pojawi się w spisie treści
+\addto\captionspolish{\renewcommand{\bibname}{Literatura}}
+\usepackage{url}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing,shapes.geometric,fit,backgrounds,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\definecolor{akcent}{RGB}{0,84,159}
+
+\newenvironment{gdzie}{%
+  \par\noindent gdzie:%
+  \begin{itemize}[label={},leftmargin=2em,labelsep=0pt,itemsep=0pt,parsep=0pt,topsep=2pt]%
+}{\end{itemize}\par}
+\widowpenalty=10000
+\clubpenalty=10000
+\hyphenation{Mas-sa-chu-setts}
+% --- Odnośniki klikalne w PDF (ładować jako ostatni) -----------------
+\usepackage[hidelinks]{hyperref}

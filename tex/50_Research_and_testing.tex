@@ -1,0 +1,136 @@
+% =====================================================================
+%  6. BADANIA STACJI BAZOWEJ  (wersja 2026-10-29)
+%  Objętość: ok. 10 stron. Podział jak w rozdz. 4 i 5: sprzęt / program.
+% =====================================================================
+\chapter{Badania stacji bazowej}
+\label{chap:badania}
+
+% 2-3 zdania: co jest w tym rozdziale.
+
+% ---------------------------------------------------------------------
+\section{Metodyka i~scenariusze badań}
+\label{sec:metodyka}
+% (ok. 1,5 str.) Cele badań, scenariusze (sesje: data, miejsce, czas
+% trwania), sposób analizy danych z rosbag2, odwołania do wzorów modelu.
+
+% ---------------------------------------------------------------------
+\section{Badania warstwy sprzętowej}
+\label{sec:badania_sprzet}
+
+\subsection{Zasięg odbioru}
+\label{sec:zasieg}
+% Maksymalna odległość, mapa/rozkład odległości, wpływ anteny.
+
+% ---------------------------------------------------------------------
+% Podrozdzial: czas pracy na zasilaniu bateryjnym (test T6.1)
+% Wkleic ZAMIAST trzech linii:
+%   \subsection{Czas pracy na zasilaniu bateryjnym}
+%   \label{sec:czas_pracy}
+%   % Test od 100 %, porównanie z pojemnością powerbanka.
+% Miejsca do uzupelnienia: \uzup{...} (czerwony tekst). Definicje makra
+% \uzup mozna przeniesc do 00_preamble.tex i usunac na koniec pisania.
+% ---------------------------------------------------------------------
+\providecommand{\uzup}[1]{\textcolor{red}{[#1]}}
+
+\subsection{Czas pracy na zasilaniu bateryjnym}
+\label{sec:czas_pracy}
+
+Stacja bazowa ma pracować w~terenie bez dostępu do sieci energetycznej, dlatego jednym z~podstawowych parametrów jest czas pracy na jednym naładowaniu powerbanku. Celem testu było wyznaczenie tego czasu przy pełnym obciążeniu systemu i~porównanie go z~pojemnością powerbanku. Wymagany czas pracy wynosi co najmniej \SI{8}{h}.
+
+Badano kompletną stację bazową zasilaną z~powerbanku LYNXER RPP-272 przez złącze USB-C. Podczas testu działały wszystkie węzły ROS~2 oraz rejestracja sesji rosbag2. Pomiar wykonano w~dniu \uzup{data} w~miejscu \uzup{opis miejsca}, przy temperaturze otoczenia \uzup{T\_ot}~\si{\degreeCelsius}. Stacja była \uzup{zamknięta w~obudowie z~wentylatorem / otwarta na stanowisku}. Zegar systemowy był synchronizowany przez NTP, co zapewniło poprawne znaczniki czasu w~dzienniku systemowym.
+
+Test przeprowadzono według następujących kroków:
+\begin{enumerate}
+  \item naładowanie powerbanku do \SI{100}{\percent} według jego wskaźnika i~odłączenie ładowarki,
+  \item podłączenie stacji do powerbanku, co powoduje uruchomienie systemu i~automatyczny start nowej sesji pomiarowej,
+  \item notowanie w~odstępach około \SI{1}{h} wskazania powerbanku, temperatury procesora i~liczby śledzonych statków powietrznych z~wyświetlacza stacji,
+  \item pozostawienie stacji bez ingerencji aż do samoczynnego odcięcia zasilania przez powerbank,
+  \item odczytanie chwili uruchomienia i~chwili ostatniego wpisu z~dziennika systemowego.
+\end{enumerate}
+
+Czas pracy na baterii obliczono jako
+\begin{equation}
+  T_{\mathrm{bat}} = t_{\mathrm{k}} - t_{\mathrm{p}},
+  \label{eq:t_bat}
+\end{equation}
+gdzie $t_{\mathrm{p}}$ oznacza chwilę uruchomienia systemu, a~$t_{\mathrm{k}}$ chwilę ostatniego wpisu w~dzienniku przed odcięciem zasilania. Aby porównać wynik z~pojemnością powerbanku, wyznaczono górne oszacowanie średniej mocy pobieranej przez stację:
+\begin{equation}
+  \bar{P} \leq \frac{E_{\mathrm{nom}}}{T_{\mathrm{bat}}}, \qquad E_{\mathrm{nom}} = Q_{\mathrm{nom}} \, U_{\mathrm{ogn}},
+  \label{eq:p_sr}
+\end{equation}
+gdzie $E_{\mathrm{nom}}$ oznacza energię znamionową powerbanku, $Q_{\mathrm{nom}}$ jego deklarowaną pojemność, a~$U_{\mathrm{ogn}}$ napięcie znamionowe ogniw. Nierówność wynika ze strat w~przetwornicy powerbanku i~z~tego, że rzeczywista pojemność może być mniejsza od deklarowanej.
+
+Wyniki pomiaru zestawiono w~tabeli~\ref{tab:bateria_wyniki}, a~obserwacje prowadzone w~trakcie testu w~tabeli~\ref{tab:bateria_obserwacje}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Wyniki testu czasu pracy stacji bazowej na zasilaniu bateryjnym}
+  \label{tab:bateria_wyniki}
+  \begin{tabular}{lcc}
+    \toprule
+    Wielkość & Wartość & Wymaganie \\
+    \midrule
+    Uruchomienie systemu $t_{\mathrm{p}}$ (UTC) & \uzup{hh:mm:ss} & -- \\
+    Ostatni wpis w~dzienniku $t_{\mathrm{k}}$ (UTC) & \uzup{hh:mm:ss} & -- \\
+    Czas pracy $T_{\mathrm{bat}}$ [h] & \uzup{np. 11,2} & $\geq 8$ \\
+    Energia znamionowa $E_{\mathrm{nom}}$ [Wh] & \uzup{z~etykiety} & -- \\
+    Górne oszacowanie mocy $\bar{P}$ [W] & \uzup{wynik} & -- \\
+    Zdarzenia niskiego napięcia [-] & \uzup{0} & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{Obserwacje prowadzone w~trakcie testu czasu pracy na baterii: $t$~-- czas od uruchomienia systemu, $B$~-- wskazanie powerbanku, $\vartheta_{\mathrm{CPU}}$~-- temperatura procesora, $N_{\mathrm{s}}$~-- liczba śledzonych statków powietrznych (odczyt z~wyświetlacza stacji)}
+  \label{tab:bateria_obserwacje}
+  \begin{tabular}{cccc}
+    \toprule
+    $t$ [h] & $B$ [\%] & $\vartheta_{\mathrm{CPU}}$ [\si{\degreeCelsius}] & $N_{\mathrm{s}}$ [-] \\
+    \midrule
+    0 & 100 & \uzup{} & \uzup{} \\
+    1 & \uzup{} & \uzup{} & \uzup{} \\
+    2 & \uzup{} & \uzup{} & \uzup{} \\
+    3 & \uzup{} & \uzup{} & \uzup{} \\
+    4 & \uzup{} & \uzup{} & \uzup{} \\
+    5 & \uzup{} & \uzup{} & \uzup{} \\
+    6 & \uzup{} & \uzup{} & \uzup{} \\
+    7 & \uzup{} & \uzup{} & \uzup{} \\
+    8 & \uzup{} & \uzup{} & \uzup{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Stacja pracowała na jednym naładowaniu powerbanku przez \uzup{T\_bat}~\si{h}, co \uzup{spełnia / nie spełnia} wymaganie minimalnego czasu pracy wynoszące \SI{8}{h}. Wynik jest \uzup{zgodny / niezgodny} z~wcześniejszym szacunkiem około \SIrange{11}{12}{h}, wyznaczonym przez ekstrapolację testu rozpoczętego przy \SI{35}{\percent} naładowania. Z~zależności~\eqref{eq:p_sr} wynika, że średnia moc pobierana przez stację nie przekraczała \uzup{P}~\si{W}. Wskazanie powerbanku malało \uzup{równomiernie / nierównomiernie}, a~ostatnie \uzup{X}~\si{\percent} odpowiadało \uzup{Y}~\si{min} pracy, dlatego wskaźnik ten nadaje się tylko do zgrubnej oceny pozostałego czasu.
+
+Przed odcięciem zasilania zarejestrowano \uzup{0} zdarzeń niskiego napięcia. Potwierdza to, że użyty powerbank utrzymuje napięcie \SI{5}{V} do końca pracy i~wyłącza się bez ostrzeżenia, więc automatyczne zamykanie systemu na podstawie pomiaru napięcia nie byłoby skuteczne. Skutki takiego odcięcia dla zarejestrowanej sesji omówiono w~podrozdziale~\ref{sec:utrata_zasilania}, a~temperaturę procesora w~podrozdziale~\ref{sec:termika}.
+
+\subsection{Warunki termiczne}
+\label{sec:termika}
+% Temperatura CPU na stole i w obudowie (temat /system/cpu_temp).
+
+\subsection{Odporność na nagłą utratę zasilania}
+\label{sec:utrata_zasilania}
+% Test 2026-10-19/20: utracony ostatni plik, odzyskanie metadanych.
+
+% ---------------------------------------------------------------------
+\section{Badania warstwy programowej}
+\label{sec:badania_program}
+
+\subsection{Weryfikacja dekodera na danych syntetycznych}
+\label{sec:dane_syntetyczne}
+% Symulowany przelot, błąd pozycji, odrzucanie błędnych ramek,
+% wykrycie błędnej pozycji stacji.
+
+\subsection{Jakość wyznaczanych pozycji}
+\label{sec:jakosc_pozycji}
+% Czas do pierwszej pozycji (lokalna vs globalna), odsetek VERIFIED,
+% odrzucone pozycje, porównanie z dump1090 (SBS).
+
+\subsection{Synchronizacja czasu i~dostępność GNSS}
+\label{sec:czas_gnss}
+% Wyznaczone przesunięcie zegara (model z rozdz. 3), przerwy w fixie.
+
+\subsection{Obciążenie procesora i~ilość rejestrowanych danych}
+\label{sec:obciazenie}
+% Obciążenie CPU przez węzły, przyrost danych w MB/h.

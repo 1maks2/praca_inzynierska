@@ -1,0 +1,131 @@
+% =====================================================================
+%  4. WARSTWA SPRZĘTOWA STACJI BAZOWEJ  (nowy plik 2026-10-29)
+%  Objętość: ok. 8 stron.
+% =====================================================================
+\chapter{Warstwa sprzętowa stacji bazowej}
+\label{chap:sprzet}
+
+% 2-3 zdania: co jest w tym rozdziale.
+
+% ---------------------------------------------------------------------
+\section{Dobór podzespołów}
+\label{sec:dobor}
+% (ok. 2,5 str.) ANALIZA porównawcza na podstawie danych katalogowych
+% (nie "badanie"!). Każdy parametr w tabelach -> źródło w bibliografii.
+
+Dobór podzespołów przeprowadzono na podstawie analizy porównawczej parametrów
+katalogowych dostępnych rozwiązań, przyjmując kryteria wynikające z~wymagań
+przedstawionych w~podrozdziale~\ref{sec:wymagania}. Jako dodatkowe kryterium
+uwzględniono dostępność podzespołów, co pozwoliło skrócić czas budowy
+prototypu i~ograniczyć jego koszt. Poprawność dokonanego wyboru zweryfikowano
+pomiarami przedstawionymi w~rozdziale~\ref{chap:badania}.
+
+% --- Platforma obliczeniowa: uzupełnij komórki "--" z kart katalogowych ---
+\begin{table}[H]
+  \centering
+  \caption{Porównanie platform obliczeniowych}
+  \label{tab:platformy}
+  \small
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Platforma & Pobór mocy [W] & GPIO/UART/SPI & ROS~2 Jazzy & GPU & Koszt \\
+    \midrule
+    Raspberry Pi 4B       & -- & -- & -- & -- & -- \\
+    Raspberry Pi 5        & -- & -- & -- & -- & -- \\
+    NVIDIA Jetson Orin Nano & -- & -- & -- & -- & -- \\
+    Mini-PC x86           & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% Akapit: uzasadnienie wyboru Raspberry Pi 4B (pobór mocy, interfejsy,
+% obsługa ROS 2; GPU Jetsona niepotrzebne w zakresie pracy -> kierunek
+% rozwoju przy integracji z kamerą).
+
+% --- Odbiornik SDR ---
+\begin{table}[H]
+  \centering
+  \caption{Porównanie odbiorników SDR}
+  \label{tab:sdr}
+  \small
+  \begin{tabular}{l c c c c c}
+    \toprule
+    Odbiornik & Zakres [MHz] & ADC [bit] & Filtr 1090~MHz & dump1090 & Koszt \\
+    \midrule
+    RTL-SDR Blog V3             & -- & -- & -- & -- & -- \\
+    FlightAware Pro Stick Plus  & -- & -- & -- & -- & -- \\
+    Airspy Mini                 & -- & -- & -- & -- & -- \\
+    HackRF One                  & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% Akapit: uzasadnienie wyboru RTL-SDR Blog V3.
+% Akapit: odbiornik GPS (UART, NMEA), wzmianka o odbiornikach z PPS.
+
+Wybrane podzespoły zestawiono w~tabeli~\ref{tab:podzespoly}.
+
+\begin{table}[H]
+  \centering
+  \caption{Zestawienie podzespołów stacji bazowej}
+  \label{tab:podzespoly}
+  \small
+  \begin{tabular}{l l >{\raggedright\arraybackslash}p{5.5cm}}
+    \toprule
+    Podzespół & Model & Uwagi \\
+    \midrule
+    Komputer        & Raspberry Pi 4B          & system uruchamiany z~pamięci USB \SI{64}{GB} \\
+    Odbiornik SDR   & RTL-SDR Blog V3          & złącze USB \\
+    Antena          & dipol z~zestawu RTL-SDR Blog & ramiona ok.\ \SI{6.5}{cm}, montaż pionowy \\
+    Odbiornik GPS   & moduł z~wyjściem NMEA    & UART, \SI{9600}{bit/s}, komunikaty GGA i~RMC co \SI{1}{s} \\
+    Wyświetlacz     & TFT ILI9341, $240\times320$ & przekątna 2,2~cala, magistrala SPI \\
+    Zasilanie       & powerbank LYNXER RPP-272 & wyjście USB \SI{5}{V} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------
+\section{Tor odbioru radiowego}
+\label{sec:tor_radiowy}
+% (ok. 1,5 str.) Antena dipolowa ćwierćfalowa (odwołanie do wzoru
+% \eqref{eq:lambda}), polaryzacja pionowa, RTL-SDR, zakłócenia od USB,
+% umiejscowienie anteny.
+
+% ---------------------------------------------------------------------
+\section{Odbiornik GPS}
+\label{sec:odbiornik_gps}
+% (ok. 1 str.) Połączenie UART, ustawienia, komunikaty, antena z widokiem
+% na niebo, utrata fixa w pomieszczeniu.
+
+% ---------------------------------------------------------------------
+\section{Elementy obsługi i~schemat połączeń}
+\label{sec:polaczenia}
+% (ok. 1,5 str.) Wyświetlacz, dioda, przycisk; schemat (rysunek);
+% konflikt GPIO3 z I2C (dlaczego I2C wyłączone).
+
+Połączenia elementów z~wyprowadzeniami złącza GPIO komputera Raspberry Pi
+zestawiono w~tabeli~\ref{tab:gpio}.
+
+\begin{table}[H]
+  \centering
+  \caption{Połączenia ze złączem GPIO komputera Raspberry Pi}
+  \label{tab:gpio}
+  \small
+  \begin{tabular}{>{\raggedright}p{3.6cm} >{\raggedright}p{5.2cm} >{\raggedright\arraybackslash}p{4.8cm}}
+    \toprule
+    Element & Wyprowadzenia (numer fizyczny) & Uwagi \\
+    \midrule
+    Dioda stanu          & 11 (GPIO17), 34 (GND) & rezystor szeregowy \SIrange{220}{330}{\ohm} \\
+    Przycisk zasilania   & 5 (GPIO3), 6 (GND)    & wybudzanie ze stanu zatrzymania \\
+    Wyświetlacz (SPI0)   & 19, 21, 23, 24; DC: 18 (GPIO24); RST: 22 (GPIO25) & sterownik ILI9341 \\
+    Odbiornik GPS (UART) & 8, 10                 & \texttt{/dev/ttyAMA0} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------
+\section{Zasilanie i~obudowa}
+\label{sec:zasilanie}
+% (ok. 1,5 str.) Powerbank (brak informacji o stanie naładowania przez
+% USB, nagłe odcięcie), obudowa drukowana 3D, chłodzenie, okienko na
+% wskaźnik powerbanka, dostęp do ładowania.

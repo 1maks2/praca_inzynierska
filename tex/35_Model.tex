@@ -1,0 +1,248 @@
+% ============================================================
+%  35_Model.tex  --  Model opisowy i matematyczny wyznaczania
+%                    danych referencyjnych (wersja uproszczona)
+%  Wstawiany do rozdzialu 3 poleceniem:  \input{tex/35_Model}
+%  Wymaga w preambule: amsmath, siunitx, enumitem
+% ============================================================
+
+% Objaśnienia symboli pod wzorem ("gdzie:"): symbol w kolumnie od
+% wcięcia akapitu, myślniki zawsze w jednej pionowej linii
+\newenvironment{objasnienia}{%
+  \noindent gdzie:
+  \begin{description}[font=\normalfont, labelindent=\parindent,
+    labelwidth=1.2cm, labelsep=0.2cm, leftmargin=!, align=left,
+    itemsep=0pt, topsep=2pt]}{\end{description}}
+
+\section{Model wyznaczania danych referencyjnych}
+\label{sec:model}
+
+Zarejestrowane przez stację dane mają posłużyć jako dane referencyjne, czyli
+mają pozwolić stwierdzić, gdzie znajdował się dany statek powietrzny
+w określonej chwili czasu. % referencja do podrozdziału.
+W tym celu potrzebny jest model, który łączy trzy źródła informacji:
+komunikaty ADS-B odbierane drogą radiową, pozycję stacji z odbiornika GPS oraz
+zegar systemowy komputera, którym oznaczane są wszystkie zapisane wiadomości.
+W niniejszym podrozdziale model ten przedstawiono najpierw w postaci słownej
+(model opisowy), a następnie w postaci wzorów (model matematyczny). Na końcu
+omówiono przyjęte uproszczenia i podano przykład obliczeniowy.
+
+\subsection{Model opisowy}
+\label{sec:model_opisowy}
+
+Statek powietrzny wyposażony w transponder ADS-B kilka razy na sekundę
+rozgłasza na częstotliwości \SI{1090}{MHz} komunikaty zawierające m.in.\ jego
+unikalny adres ICAO, pozycję (szerokość i długość geograficzną) wyznaczoną
+przez pokładowy odbiornik GNSS, wysokość barometryczną oraz prędkość
+względem ziemi~\cite{sun2021}. Stacja odbiera część tych komunikatów --
+niektóre giną z powodu zakłóceń, zbyt słabego sygnału lub przesłonięcia
+anteny. Odebrane komunikaty są zapisywane w postaci tekstowej (format SBS)
+razem ze znacznikiem czasu nadawanym przez komputer w chwili odbioru.
+
+Komunikat ADS-B mówi, gdzie samolot jest, ale nie mówi, gdzie jest
+względem stacji. Do tego potrzebna jest pozycja samej stacji, którą
+podaje odbiornik GPS w komunikacie NMEA \texttt{GGA}~\cite{nmea0183}.
+Znając obie pozycje, można obliczyć odległość od stacji do samolotu.
+
+Drugim problemem jest czas. Komputer Raspberry Pi nie ma podtrzymywanego
+bateryjnie zegara, a w terenie nie ma dostępu do internetu, więc jego zegar
+może się mylić o nieznaną wartość. Ponieważ wszystkie zapisane wiadomości są
+oznaczone właśnie tym zegarem, błąd zegara przenosi się na wszystkie dane.
+Odbiornik GPS co sekundę przesyła jednak dokładny czas UTC (komunikat
+\texttt{RMC}). Komputer zapisuje go razem z własnym wskazaniem zegara, dzięki
+czemu po zakończeniu pomiarów można zmierzyć, o ile zegar się mylił,
+i poprawić czas wszystkich wiadomości.
+
+Granice modelowanego układu wyznacza sama stacja (antena, odbiornik RTL-SDR,
+odbiornik GPS i komputer). Samoloty i satelity GPS należą do otoczenia,
+a punktami styku są: łącze radiowe \SI{1090}{MHz}, łącze szeregowe
+odbiornika GPS oraz plik zapisu rosbag2. Model składa się z dwóch części:
+\begin{enumerate}[nosep]
+  \item modelu czasu -- poprawienie znaczników czasu zegara systemowego
+        na czas UTC (podrozdział~\ref{sec:model_czasu}),
+  \item modelu odległości -- obliczenie odległości od stacji do samolotu
+        (podrozdział~\ref{sec:model_odleglosc}).
+\end{enumerate}
+
+\subsection{Model czasu}
+\label{sec:model_czasu}
+
+Niech $t$ oznacza wskazanie zegara systemowego komputera, a $\tau$ --
+odpowiadający mu rzeczywisty czas UTC. Zależność między nimi zapisano jako
+\begin{equation}
+  \tau = t + \delta,
+  \label{eq:model_zegara}
+\end{equation}
+gdzie $\delta$ jest przesunięciem (błędem) zegara systemowego w sekundach.
+Przyjęto, że w trakcie jednej sesji pomiarowej przesunięcie $\delta$ jest
+stałe.
+
+Węzeł obsługi GPS publikuje w temacie \texttt{/gps/time\_ref} pary
+$(t_k, \tau_k)$, $k = 1, 2, \ldots, K$, gdzie $\tau_k$ jest czasem UTC
+odczytanym z komunikatu \texttt{RMC}, a $t_k$ -- wskazaniem zegara
+systemowego w chwili odczytu tego komunikatu. Każda para daje jeden pomiar
+przesunięcia:
+\begin{equation}
+  \delta_k = \tau_k - t_k, \qquad k = 1, 2, \ldots, K.
+  \label{eq:offset_pomiar}
+\end{equation}
+Pojedyncze pomiary różnią się nieco od siebie, dlatego jako wynik przyjmuje
+się ich średnią arytmetyczną, a rozrzut pomiarów opisuje się odchyleniem
+standardowym:
+\begin{equation}
+  \hat{\delta} = \frac{1}{K} \sum_{k=1}^{K} \delta_k,
+  \qquad
+  \sigma_{\delta} = \sqrt{\frac{1}{K-1} \sum_{k=1}^{K}
+                    \bigl(\delta_k - \hat{\delta}\bigr)^2},
+  \label{eq:offset_srednia}
+\end{equation}
+\begin{objasnienia}
+  \item[$\hat{\delta}$] -- wyznaczone przesunięcie zegara w sekundach,
+  \item[$\sigma_{\delta}$] -- odchylenie standardowe pomiarów przesunięcia w sekundach,
+  \item[$K$] -- liczba pomiarów (przy jednym pomiarze na sekundę sesja trwająca \SI{10}{min} daje ok.~600 pomiarów).
+\end{objasnienia}
+Poprawiony czas UTC dowolnej zapisanej wiadomości o znaczniku $t$ wynosi
+\begin{equation}
+  \hat{\tau} = t + \hat{\delta}.
+  \label{eq:korekta_czasu}
+\end{equation}
+
+Pomiar \eqref{eq:offset_pomiar} nie jest idealny, ponieważ znacznik $t_k$
+jest nadawany dopiero po przesłaniu komunikatu łączem szeregowym i odczytaniu
+go przez program. Przy prędkości \num{9600}~bit/s przesłanie jednego znaku
+(10~bitów) trwa ok.\ \SI{1.04}{ms}, a komunikat NMEA ma do 82 znaków, więc
+sama transmisja zajmuje do ok.\ \SI{85}{ms}. Program odczytuje port co
+\SI{100}{ms}, co dodaje średnio kolejne \SI{50}{ms}. Wyznaczone przesunięcie
+$\hat{\delta}$ jest więc obarczone błędem rzędu \SI{0.1}{s}, co -- jak
+pokazano w podrozdziale~\ref{sec:model_przyklad} -- jest wartością
+akceptowalną.
+
+\subsection{Model odległości}
+\label{sec:model_odleglosc}
+
+\paragraph{Dane wejściowe.}
+Z komunikatu SBS typu \texttt{MSG,3} odczytuje się szerokość $\varphi_i$
+i długość $\lambda_i$ geograficzną samolotu (w stopniach) oraz jego wysokość
+w stopach. Z tematu \texttt{/gps/fix} odczytuje się szerokość
+$\varphi_{\mathrm{s}}$, długość $\lambda_{\mathrm{s}}$ i wysokość
+$h_{\mathrm{s}}$ stacji (w metrach). Indeks $i$ oznacza samolot, a indeks
+$\mathrm{s}$ -- stację.
+
+\paragraph{Przeliczenie jednostek.}
+W lotnictwie wysokość podaje się w stopach, a prędkość w węzłach. Na
+jednostki układu SI przelicza się je wzorami
+\begin{equation}
+  h_i = \num{0.3048}\, h_{\mathrm{ft}}, \qquad
+  v = \num{0.514444}\, v_{\mathrm{kt}},
+  \label{eq:jednostki}
+\end{equation}
+\begin{objasnienia}
+  \item[$h_{\mathrm{ft}}$] -- wysokość samolotu w stopach,
+  \item[$h_i$] -- wysokość samolotu w metrach,
+  \item[$v_{\mathrm{kt}}$] -- prędkość w węzłach,
+  \item[$v$] -- prędkość w metrach na sekundę.
+\end{objasnienia}
+
+\paragraph{Odległość po powierzchni Ziemi.}
+Ziemię przybliżono kulą o promieniu $R_{\mathrm{Z}} = \SI{6371}{km}$.
+Odległość między stacją a punktem na powierzchni Ziemi leżącym dokładnie pod
+samolotem oblicza się wzorem haversine:
+\begin{equation}
+  s = 2 R_{\mathrm{Z}} \arcsin \sqrt{
+        \sin^2\frac{\Delta\varphi}{2}
+        + \cos\varphi_{\mathrm{s}} \cos\varphi_i
+          \sin^2\frac{\Delta\lambda}{2}},
+  \label{eq:haversine}
+\end{equation}
+\begin{objasnienia}
+  \item[$s$] -- odległość mierzona po powierzchni Ziemi w metrach,
+  \item[$\Delta\varphi$] -- różnica szerokości geograficznych, $\Delta\varphi = \varphi_i - \varphi_{\mathrm{s}}$, w radianach,
+  \item[$\Delta\lambda$] -- różnica długości geograficznych, $\Delta\lambda = \lambda_i - \lambda_{\mathrm{s}}$, w radianach,
+  \item[$R_{\mathrm{Z}}$] -- średni promień Ziemi w metrach.
+\end{objasnienia}
+Kąty podawane w stopniach należy przed użyciem we wzorze
+\eqref{eq:haversine} zamienić na radiany, mnożąc je przez $\pi/180$.
+
+\paragraph{Odległość skośna.}
+Samolot znajduje się na wysokości $h_i$, a stacja na wysokości
+$h_{\mathrm{s}}$. Odległość w linii prostej od stacji do samolotu
+(odległość skośną) przybliża się, traktując odległość $s$ i różnicę wysokości
+jako przyprostokątne trójkąta prostokątnego:
+\begin{equation}
+  \rho = \sqrt{s^2 + \Delta h^2}, \qquad \Delta h = h_i - h_{\mathrm{s}},
+  \label{eq:odleglosc_skosna}
+\end{equation}
+gdzie $\rho$ jest odległością skośną, a $\Delta h$ -- różnicą wysokości
+samolotu i stacji, obie w metrach. Wzory \eqref{eq:jednostki}%
+--\eqref{eq:odleglosc_skosna} są zaimplementowane w węźle wyświetlacza
+stacji, który na ich podstawie pokazuje odległość do każdego samolotu.
+
+\subsection{Uproszczenia modelu}
+\label{sec:model_uproszczenia}
+
+W modelu przyjęto następujące uproszczenia:
+\begin{itemize}[nosep]
+  \item Ziemia jest kulą, a nie elipsoidą -- powoduje to błąd odległości
+        rzędu kilku dziesiątych procenta,
+  \item we wzorze \eqref{eq:odleglosc_skosna} pominięto krzywiznę Ziemi;
+        błąd rośnie wraz z odległością samolotu od stacji,
+  \item wysokość barometryczna z ADS-B jest traktowana jak wysokość nad
+        poziomem morza; przy ciśnieniu innym niż standardowe
+        (\SI{1013.25}{hPa}) różnica może sięgać kilkudziesięciu metrów,
+  \item przesunięcie zegara $\delta$ jest stałe w trakcie sesji (pominięto
+        powolny dryf zegara),
+  \item stacja jest nieruchoma w trakcie sesji,
+  \item pominięto opóźnienie między odebraniem komunikatu ADS-B a nadaniem mu
+        znacznika czasu (pojedyncze milisekundy).
+\end{itemize}
+Uproszczenia te są wystarczające do podglądu na żywo i do analizy zasięgu
+stacji. Przy dalszym rozwoju systemu model odległości można zastąpić
+dokładniejszym przeliczeniem współrzędnych do lokalnego układu kartezjańskiego
+związanego ze stacją, które uwzględnia kształt Ziemi i pozwala dodatkowo
+wyznaczyć kierunek obserwacji samolotu.
+
+\subsection{Przykład obliczeniowy}
+\label{sec:model_przyklad}
+
+Przyjęto stację w punkcie $\varphi_{\mathrm{s}} = \SI{50.0}{\degree}$,
+$\lambda_{\mathrm{s}} = \SI{20.0}{\degree}$, $h_{\mathrm{s}} = \SI{250}{m}$
+oraz samolot w punkcie $\varphi_i = \SI{50.3169}{\degree}$,
+$\lambda_i = \SI{20.49795}{\degree}$, lecący na wysokości
+$h_{\mathrm{ft}} = \num{32800}$~stóp.
+
+Z wzoru \eqref{eq:jednostki} wysokość samolotu wynosi
+\begin{equation}
+  h_i = \num{0.3048} \cdot \num{32800} \approx \SI{9997.4}{m},
+  \qquad
+  \Delta h = \num{9997.4} - 250 = \SI{9747.4}{m}.
+\end{equation}
+Różnice współrzędnych wynoszą $\Delta\varphi = \SI{0.3169}{\degree}$
+i $\Delta\lambda = \SI{0.49795}{\degree}$. Wyrażenie pod pierwiastkiem we
+wzorze \eqref{eq:haversine} ma wartość ok.\ \num{1.540e-5}, skąd
+\begin{equation}
+  s \approx \SI{50.00}{km}, \qquad
+  \rho = \sqrt{\num{50000}^2 + \num{9747.4}^2} \approx \SI{50.94}{km}.
+\end{equation}
+
+Wpływ błędu czasu pokazuje następujące oszacowanie: samolot lecący
+z prędkością $v = \SI{230}{m/s}$ w czasie $\Delta\tau$ pokonuje drogę
+\begin{equation}
+  \Delta x = v \, \Delta\tau .
+  \label{eq:blad_czasu}
+\end{equation}
+Jeżeli zegar stacji myli się o \SI{10}{s} i nie zostanie poprawiony wzorem
+\eqref{eq:korekta_czasu}, pozycja przypisana danej chwili będzie błędna
+o ok.\ \SI{2.3}{km}. Po korekcji błąd czasu spada do ok.\ \SI{0.1}{s},
+a błąd pozycji -- do ok.\ \SI{23}{m}. Uzasadnia to rejestrowanie czasu GPS
+razem z danymi ADS-B.
+
+\subsection{Weryfikacja modelu}
+\label{sec:model_weryfikacja}
+
+Poprawność modelu odległości można sprawdzić na prostych przypadkach:
+dla samolotu położonego dokładnie nad stacją powinno zachodzić $s = 0$
+i $\rho = \Delta h$, a dla punktów odległych o \SI{1}{\degree} szerokości
+geograficznej $s \approx \SI{111.2}{km}$. Poprawność modelu czasu można
+sprawdzić, porównując $\hat{\delta}$ wyznaczone w sesji z dostępem do
+internetu (gdy zegar jest synchronizowany przez NTP i $\hat{\delta}$ powinno
+być bliskie zera) z sesją bez dostępu do sieci. Szczegółową ocenę na
+podstawie zarejestrowanych danych przedstawiono w~rozdziale~\ref{chap:badania}.
