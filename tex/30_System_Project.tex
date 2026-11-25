@@ -1,6 +1,4 @@
 % =====================================================================
-%  3. PROJEKT STACJI BAZOWEJ  (wersja 2026-10-29)
-%  Objętość: ok. 9 stron. Model (35_Model.tex) dołączony na końcu.
 % =====================================================================
 \chapter{Projekt stacji bazowej}
 \label{chap:projekt}
@@ -11,23 +9,200 @@
 \section{Wymagania}
 \label{sec:wymagania}
 
+Wymagania stawiane stacji bazowej sformułowano na podstawie trzech źródeł. Pierwszym jest opis tematu pracy, który określa podstawowe zadania stacji: odbiór wiadomości ADS-B z~użyciem odbiornika SDR, analizę odebranych sygnałów na platformie wbudowanej, ustalenie pozycji stacji na podstawie sygnału GPS oraz udostępnianie wyników jako komunikatów środowiska ROS~2. Drugim źródłem jest przeznaczenie rejestrowanych danych, opisane w~podrozdziale~\ref{sec:motywacja}, czyli ich wykorzystanie jako danych referencyjnych dla algorytmu wykrywania statków powietrznych na obrazie z~kamery. Trzecim są ograniczenia systemu ADS-B omówione w~podrozdziale~\ref{sec:adsb} oraz cechy istniejących rozwiązań przedstawione w~podrozdziale~\ref{sec:istniejace}.
+
+Przed sformułowaniem wymagań określono, kto i~w~jaki sposób korzysta ze stacji. W~tym celu sporządzono diagram przypadków użycia w~notacji UML~2, przedstawiony na rysunku~\ref{rys:przypadki_uzycia}. Prostokąt wyznacza granicę systemu, którym jest stacja bazowa. Poza nią znajdują się aktorzy, czyli osoby i~systemy zewnętrzne współpracujące ze stacją. Operator stacji ustawia ją w~terenie, włącza, obserwuje jej stan i~wyłącza. Statki powietrzne nadają wiadomości ADS-B, a~satelity systemu GPS umożliwiają wyznaczenie pozycji stacji i~czasu UTC. Użytkownikiem danych jest osoba lub program, np.\ algorytm wykrywania statków powietrznych, który odbiera komunikaty w~trakcie pracy stacji albo korzysta z~zapisanych sesji po zakończeniu pomiarów.
+
+\begin{figure}[!htb]
+\centering
+\begin{tikzpicture}[
+    font=\footnotesize,
+    >={Stealth[length=2mm]},
+    pu/.style={draw, thick, ellipse, fill=akcent!10, align=center,
+               minimum width=38mm, minimum height=10mm, inner sep=1pt},
+    zawiera/.style={->, dashed, thick, >={Straight Barb[length=2mm]}},
+    etyk/.style={font=\scriptsize, fill=white, inner sep=1pt},
+    aktor/.pic={
+      \draw[thick] (0,0.55) circle (0.15);
+      \draw[thick] (0,0.40) -- (0,-0.05);
+      \draw[thick] (-0.25,0.25) -- (0.25,0.25);
+      \draw[thick] (0,-0.05) -- (-0.20,-0.40);
+      \draw[thick] (0,-0.05) -- (0.20,-0.40);
+    },
+]
+\draw[thick] (2.4,-3.3) rectangle (13.6,5.2);
+\node[anchor=north west, font=\small\bfseries] at (2.5,5.15) {Stacja bazowa};
+
+\node[pu] (pu1) at (4.8, 4.0) {Uruchomienie stacji\\{\scriptsize PU-1}};
+\node[pu] (pu4) at (4.8, 2.4) {Podgląd stanu stacji\\{\scriptsize PU-4}};
+\node[pu] (pu5) at (4.8, 0.8) {Wyłączenie stacji\\{\scriptsize PU-5}};
+\node[pu] (pu6) at (4.8,-1.0) {Odbiór komunikatów\\na bieżąco {\scriptsize PU-6}};
+\node[pu] (pu7) at (4.8,-2.5) {Pobranie zapisanych\\sesji {\scriptsize PU-7}};
+
+\node[pu] (pu2) at (10.5, 4.0) {Rejestracja sesji\\pomiarowej {\scriptsize PU-2}};
+\node[pu] (pu3) at (11.6, 2.1) {Odbiór i~dekodowanie\\wiadomości ADS-B {\scriptsize PU-3}};
+\node[pu, minimum width=40mm] (pu8) at (9.6, 0.2) {Wyznaczanie pozycji\\i~czasu stacji {\scriptsize PU-8}};
+
+\pic at (1.05, 2.3) {aktor};
+\node[align=center] (op) at (1.05, 1.55) {Operator\\stacji};
+\pic at (1.05,-1.9) {aktor};
+\node[align=center] (ud) at (1.05,-2.65) {Użytkownik\\danych};
+\pic at (14.95, 2.1) {aktor};
+\node[align=center] (sp) at (14.95, 1.35) {Statek\\powietrzny};
+\pic at (14.95, 0.2) {aktor};
+\node[align=center] (gps) at (14.95,-0.55) {System\\GPS};
+
+\draw[thick] (1.4, 2.55) -- (pu1.west);
+\draw[thick] (1.4, 2.45) -- (pu4.west);
+\draw[thick] (1.4, 2.35) -- (pu5.west);
+\draw[thick] (1.4,-1.65) -- (pu6.west);
+\draw[thick] (1.4,-1.75) -- (pu7.west);
+\draw[thick] (14.6, 2.35) -- (pu3.east);
+\draw[thick] (14.6, 0.45) -- (pu8.east);
+
+\draw[zawiera] (pu1.east) -- node[etyk, above=1pt] {«include»} (pu2.west);
+\draw[zawiera] (pu2.south -| pu3.north) -- node[etyk, right=1pt] {«include»} (pu3.north);
+\draw[zawiera] (9.0,3.68) -- node[etyk, left=1pt, pos=0.45] {«include»} (9.0,0.70);
+\end{tikzpicture}
+\caption{Diagram przypadków użycia stacji bazowej w~notacji UML~2. Prostokąt oznacza granicę systemu, elipsy oznaczają przypadki użycia wraz z~identyfikatorami, a~postacie ludzi oznaczają aktorów. Linia ciągła łączy aktora z~przypadkiem użycia, w~którym uczestniczy. Strzałka przerywana «include» prowadzi od przypadku podstawowego do przypadku, który jest zawsze wykonywany w~jego ramach.}
+\label{rys:przypadki_uzycia}
+\end{figure}
+
+Uruchomienie stacji (PU-1) zawsze obejmuje rozpoczęcie rejestracji sesji pomiarowej (PU-2), a~ta z~kolei zawsze obejmuje odbiór i~dekodowanie wiadomości ADS-B (PU-3) oraz wyznaczanie pozycji i~czasu stacji (PU-8). Zależności te oznaczono na rysunku relacją «include». Rejestracja sesji pomiarowej jest najważniejszym przypadkiem użycia, ponieważ jej wynikiem są dane referencyjne. Z~tego powodu opisano ją szczegółowo w~tabeli~\ref{tab:pu_rejestracja}, wraz ze scenariuszami alternatywnymi i~scenariuszami wyjątków. Na podstawie diagramu i~opisu scenariuszy sformułowano wymagania przedstawione w~kolejnych punktach.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Opis przypadku użycia PU-2 Rejestracja sesji pomiarowej}
+  \label{tab:pu_rejestracja}
+  \small
+  \begin{tabular}{>{\raggedright}p{3.0cm} >{\raggedright\arraybackslash}p{12.1cm}}
+    \toprule
+    Identyfikator i~nazwa & PU-2 Rejestracja sesji pomiarowej \\
+    \midrule
+    Aktorzy & operator stacji (aktor główny), statek powietrzny, system GPS \\
+    \midrule
+    Cel & zapisanie kompletnego zestawu danych referencyjnych z~jednego ustawienia stacji w~terenie \\
+    \midrule
+    Warunki wstępne & stacja ustawiona w~terenie, antena odbiornika GPS z~widokiem na niebo, naładowany powerbank \\
+    \midrule
+    Wyzwalacz & włączenie zasilania stacji (PU-1) \\
+    \midrule
+    Scenariusz główny &
+    1.~System operacyjny uruchamia program dump1090 i~węzły ROS~2 bez udziału operatora.\newline
+    2.~Rozpoczyna się zapis nowej sesji, a~na wyświetlaczu pojawia się wskaźnik nagrywania.\newline
+    3.~Po uzyskaniu pozycji przez odbiornik GPS stacja publikuje swoją pozycję i~czas UTC, a~znaczniki czasu wyników są od tej chwili wyrażane w~skali UTC.\newline
+    4.~Stacja odbiera i~dekoduje wiadomości ADS-B, wyznacza położenie statków powietrznych względem stacji i~publikuje je jako komunikaty ROS~2.\newline
+    5.~Wszystkie tematy są zapisywane do plików, przy czym co \SI{10}{min} rozpoczynany jest nowy plik.\newline
+    6.~Operator przytrzymuje przycisk zasilania przez \SI{2}{s}.\newline
+    7.~Węzły i~rejestrator zostają zatrzymane, a~ostatni plik zapisu zostaje poprawnie zamknięty.\newline
+    8.~Dioda stanu gaśnie, a~operator odłącza zasilanie. \\
+    \midrule
+    Scenariusze alternatywne &
+    3.A.~Odbiornik GPS nie uzyskuje pozycji. Pozycje statków powietrznych są wyznaczane wyłącznie przez dekodowanie globalne, bez położenia względem stacji i~ze znacznikami czasu zegara komputera. Wyświetlacz informuje o~braku pozycji GPS. Po jej uzyskaniu scenariusz wraca do kroku~3.\newline
+    3.B.~Czas podawany przez odbiornik GPS zmienia się skokowo. Stacja wykrywa skok i~wyznacza przesunięcie zegara komputera od nowa, a~scenariusz jest kontynuowany od kroku~4. \\
+    \midrule
+    Scenariusze wyjątków &
+    4.E.~Połączenie z~programem dump1090 zostaje przerwane. Węzeł odbierający dane ponawia połączenie co \SI{2}{s}, a~zapis pozostałych tematów trwa bez przerwy.\newline
+    5.E.~Zasilanie zostaje nagle odcięte. Ostatni plik pozostaje niezamknięty i~może zostać utracona część zapisu z~ostatnich \SI{10}{min}. Pozostałe pliki sesji są kompletne, a~jej opis odtwarza się poleceniem \texttt{ros2 bag reindex}. \\
+    \midrule
+    Warunki końcowe & zamknięta, kompletna sesja zapisana w~pamięci stacji \\
+    \midrule
+    Powiązane wymagania & od WF-1 do WF-7, WN-1, WN-2, WN-5, od WR-1 do WR-4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Każdemu wymaganiu nadano identyfikator złożony z~liter określających grupę oraz numeru: WF oznacza wymagania funkcjonalne, WN pozafunkcjonalne, a~WR wymagania wynikające z~zastosowania danych jako referencyjnych. W~tabelach podano również planowany sposób weryfikacji każdego wymagania. Test oznacza sprawdzenie działania funkcji dla danych wejściowych o~znanym wyniku, pomiar wyznaczenie wartości liczbowej i~porównanie jej z~progiem, a~inspekcja sprawdzenie konfiguracji, kodu lub zapisanych plików. Identyfikatory wykorzystano w~rozdziałach~\ref{chap:sprzet} i~\ref{chap:oprogramowanie} do wskazania sposobu realizacji wymagań, a~w~rozdziale~\ref{chap:badania} do opisu ich weryfikacji.
+
 \subsection{Wymagania funkcjonalne}
 \label{sec:wymagania_funkcjonalne}
-% Odbiór ramek ADS-B, odczyt pozycji i czasu GPS, dekodowanie pozycji
-% w czasie rzeczywistym, publikacja jako komunikaty ROS 2, rejestracja,
-% podgląd stanu na wyświetlaczu.
+
+Wymagania funkcjonalne określają usługi, które stacja bazowa udostępnia. Zestawiono je w~tabeli~\ref{tab:wf}. Wymagania od WF-1 do WF-5 dotyczą akwizycji i~przetwarzania danych, czyli drogi od sygnału radiowego do położenia statku powietrznego względem stacji. Wymagania WF-6 i~WF-7 opisują sposób udostępniania i~utrwalania wyników, a~wymagania od WF-8 do WF-10 obsługę stacji przez operatora.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Wymagania funkcjonalne stacji bazowej}
+  \label{tab:wf}
+  \small
+  \begin{tabular}{>{\raggedright}p{1.2cm} >{\raggedright}p{11.4cm} >{\raggedright\arraybackslash}p{1.9cm}}
+    \toprule
+    ID & Wymaganie & Weryfikacja \\
+    \midrule
+    WF-1 & Odbiór sygnałów radiowych o~częstotliwości \SI{1090}{\mega\hertz} i~demodulacja ramek Mode~S wraz z~kontrolą sumy CRC. & test \\
+    WF-2 & Dekodowanie wiadomości ADS-B: adresu ICAO, znaku wywoławczego, pozycji, wysokości barometrycznej i~geometrycznej, prędkości względem ziemi, kursu oraz prędkości pionowej. & test \\
+    WF-3 & Wyznaczanie pozycji statków powietrznych w~czasie rzeczywistym, bezpośrednio po odebraniu ramki z~wiadomością o~pozycji. & test \\
+    WF-4 & Wyznaczanie pozycji geograficznej stacji bazowej i~czasu UTC na podstawie danych z~odbiornika GPS. & test \\
+    WF-5 & Wyznaczanie położenia statku powietrznego względem stacji: odległości po powierzchni Ziemi, odległości w~linii prostej, azymutu i~kąta elewacji. & test \\
+    WF-6 & Publikowanie surowych ramek, pozycji i~czasu stacji oraz stanu statków powietrznych jako komunikatów ROS~2 w~tematach o~ustalonych nazwach i~typach. & inspekcja \\
+    WF-7 & Zapis wszystkich publikowanych tematów do plików w~pamięci stacji przez cały czas jej pracy. & test \\
+    WF-8 & Prezentacja na wbudowanym wyświetlaczu śledzonych statków powietrznych, pozycji stacji, stanu rejestracji, temperatury procesora i~ostrzeżenia o~zbyt niskim napięciu zasilania. & inspekcja \\
+    WF-9 & Pomiar i~rejestracja temperatury procesora oraz sygnalizacji zbyt niskiego napięcia zasilania. & test \\
+    WF-10 & Wyłączenie stacji przyciskiem z~poprawnym zamknięciem plików zapisu oraz sygnalizacja stanu pracy diodą. & test \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Wymaganie WF-3 wynika bezpośrednio z~opisu tematu, który przewiduje generowanie danych referencyjnych w~czasie rzeczywistym. Wyniki mają być dostępne dla innych węzłów ROS~2 już w~trakcie pracy stacji, a~nie dopiero po przetworzeniu zapisanej sesji. Wymaganie WF-5 łączy pozycję statku powietrznego z~pozycją stacji. Azymut i~kąt elewacji określają kierunek, w~którym statek powietrzny jest widoczny z~miejsca ustawienia stacji, a~więc wielkości potrzebne do wskazania go na obrazie z~kamery. Wymaganie WF-6 dotyczy formy wyników: przetworzone dane mają mieć postać komunikatów o~zdefiniowanych polach i~jednostkach, a~nie tekstu wymagającego dalszej analizy. Szczegóły tematów i~komunikatów przedstawiono w~podrozdziale~\ref{sec:tematy}.
 
 \subsection{Wymagania pozafunkcjonalne}
 \label{sec:wymagania_pozafunkcjonalne}
-% Wielogodzinna praca z powerbanka, przenośność, start bez obsługi
-% (autostart), odporność na nagłą utratę zasilania, praca bez internetu.
+
+Wymagania pozafunkcjonalne określają warunki, w~jakich stacja ma realizować swoje funkcje. Zestawiono je w~tabeli~\ref{tab:wn}. Większość z~nich wynika z~pracy w~warunkach polowych, czyli bez sieci energetycznej, bez dostępu do internetu i~bez stałej obecności operatora przy stacji.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Wymagania pozafunkcjonalne stacji bazowej}
+  \label{tab:wn}
+  \small
+  \begin{tabular}{>{\raggedright}p{1.2cm} >{\raggedright}p{11.4cm} >{\raggedright\arraybackslash}p{1.9cm}}
+    \toprule
+    ID & Wymaganie & Weryfikacja \\
+    \midrule
+    WN-1 & Zasilanie z~przenośnego akumulatora przez złącze USB \SI{5}{V} i~czas pracy na jednym naładowaniu nie krótszy niż \SI{8}{h}. & pomiar \\
+    WN-2 & Samoczynne rozpoczęcie pracy i~rejestracji po włączeniu zasilania, bez klawiatury, monitora i~połączenia sieciowego. & test \\
+    WN-3 & Pełna funkcjonalność bez dostępu do internetu i~brak przesyłania danych do zewnętrznych serwisów. & inspekcja \\
+    WN-4 & Przetwarzanie w~czasie rzeczywistym: średni czas przetworzenia jednej ramki nie dłuższy niż \SI{1}{ms}. & pomiar \\
+    WN-5 & Utrata nie więcej niż \SI{10}{min} zapisu po nagłym odcięciu zasilania, przy zachowaniu możliwości odczytu pozostałej części sesji. & test \\
+    WN-6 & Temperatura procesora stacji zamkniętej w~obudowie niższa niż \SI{80}{\degreeCelsius} przez cały czas pracy. & pomiar \\
+    WN-7 & Odtwarzalność środowiska programowego: oprogramowanie oparte na wersji ROS~2 z~długoterminowym wsparciem, uruchamiane w~kontenerze i~przechowywane w~repozytorium kodu. & inspekcja \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Minimalny czas pracy w~wymaganiu WN-1 przyjęto tak, aby jedno naładowanie akumulatora wystarczało na cały dzień pomiarów, obejmujący np.\ sesję dzienną i~wieczorną w~tym samym miejscu. Wymagania WN-2 i~WN-3 wynikają z~tego, że w~terenie stacja nie ma dostępu do sieci, a~operator nie dysponuje monitorem ani klawiaturą. Wymaganie WN-3 ma również znaczenie dla prywatności: zapisane dane zawierają dokładną pozycję stacji, dlatego pozostają w~jej pamięci, inaczej niż w~sieciach odbiorników opisanych w~podrozdziale~\ref{sec:istniejace}.
+
+Próg w~wymaganiu WN-4 dobrano z~dużym zapasem. Przy kilkudziesięciu ramkach odbieranych w~ciągu sekundy średni odstęp między kolejnymi ramkami wynosi kilkanaście milisekund. Czas przetwarzania nie dłuższy niż \SI{1}{ms} pozostawia więc moc obliczeniową dla pozostałych węzłów, wyświetlacza i~rejestracji danych. Wymaganie WN-5 uwzględnia to, że akumulator może zostać rozładowany lub odłączony bez ostrzeżenia, a~wtedy system nie ma możliwości poprawnego zamknięcia plików. Próg temperatury w~wymaganiu WN-6 odpowiada temperaturze, przy której oprogramowanie układowe komputera Raspberry Pi~4B zaczyna obniżać częstotliwość taktowania procesora~\cite{rpi_thermal}. Obniżenie taktowania mogłoby naruszyć wymaganie WN-4. Wymaganie WN-7 pozwala odtworzyć identyczne środowisko na innym egzemplarzu komputera, a~wybór wersji z~długoterminowym wsparciem zapewnia aktualizacje przez cały okres użytkowania stacji.
 
 \subsection{Wymagania dotyczące danych referencyjnych}
 \label{sec:wymagania_referencja}
-% Znaczniki czasu UTC o znanej dokładności, znana pozycja stacji,
-% bezstratny zapis surowych danych, jednoznaczne pozycje samolotów,
-% kierunek do samolotu (azymut, elewacja).
 
+Dane referencyjne muszą pozwolić stwierdzić, gdzie względem stacji znajdował się dany statek powietrzny w~określonej chwili. Odpowiedź na to pytanie wymaga trzech informacji: dokładnego czasu, znanej pozycji stacji oraz wiarygodnej pozycji statku powietrznego. Wymagania dotyczące każdej z~nich zestawiono w~tabeli~\ref{tab:wr}.
+
+\begin{table}[!htb]
+  \centering
+  \caption{Wymagania wynikające z~zastosowania danych jako referencyjnych}
+  \label{tab:wr}
+  \small
+  \begin{tabular}{>{\raggedright}p{1.2cm} >{\raggedright}p{11.4cm} >{\raggedright\arraybackslash}p{1.9cm}}
+    \toprule
+    ID & Wymaganie & Weryfikacja \\
+    \midrule
+    WR-1 & Znaczniki czasu wyników w~skali UTC, wyznaczane na podstawie czasu z~odbiornika GPS niezależnie od zegara komputera, z~informacją o~źródle czasu w~każdym komunikacie; rozrzut wyznaczanego przesunięcia zegara (odchylenie standardowe) nie większy niż \SI{0.1}{s}. & pomiar \\
+    WR-2 & Zapis pozycji stacji wyznaczonej przez odbiornik GPS przez cały czas sesji, razem z~pozostałymi danymi. & inspekcja \\
+    WR-3 & Bezstratny zapis surowych danych wejściowych: wszystkich odebranych ramek, wiadomości z~niezależnego dekodera oraz par złożonych z~czasu GPS i~odpowiadającego mu wskazania zegara komputera, umożliwiający ponowne przetworzenie sesji po jej zakończeniu. & inspekcja \\
+    WR-4 & Ocena wiarygodności każdej pozycji, z~wyróżnieniem pozycji potwierdzonych przez dwie niezależne metody dekodowania, oraz odrzucanie wszystkich ramek z~błędną sumą CRC. & test \\
+    WR-5 & Błąd pozycji względem znanej trajektorii nie większy niż \SI{10}{m} oraz mediana różnicy względem pozycji z~niezależnego dekodera nie większa niż \SI{10}{m}. & test, pomiar \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Wymaganie WR-1 ma największy wpływ na przydatność danych. Komputer Raspberry Pi nie ma zegara podtrzymywanego bateryjnie, a~w~terenie nie może synchronizować czasu przez internet. Jego zegar może więc różnić się od czasu UTC o~nieznaną, nawet bardzo dużą wartość, która przenosi się na znaczniki czasu wszystkich zapisanych danych. Statek powietrzny lecący z~prędkością \SI{230}{m/s} pokonuje w~ciągu \SI{0.1}{s} około \SI{23}{m}, dlatego przyjęty próg odpowiada błędowi położenia porównywalnemu z~wymaganą dokładnością pozycji. Sposób wyznaczania przesunięcia zegara omówiono w~podrozdziale~\ref{sec:model}. Wymaganie WR-2 wynika z~tego, że stacja jest przenośna, a~jej pozycja zmienia się między sesjami i~nie może zostać wpisana na stałe.
+
+Wymaganie WR-3 zabezpiecza dane przed błędami przetwarzania. Jeżeli błąd w~wyznaczaniu pozycji lub czasu zostanie wykryty dopiero po pomiarach, zapisane surowe dane pozwalają przetworzyć sesję ponownie, bez powtarzania pomiarów w~terenie. Zapis wiadomości z~niezależnego dekodera umożliwia ponadto porównanie wyników przetwarzania z~innym źródłem.
+
+Wymagania WR-4 i~WR-5 wynikają z~ograniczeń systemu ADS-B opisanych w~podrozdziale~\ref{sec:adsb}. Część ramek jest uszkadzana lub tracona, a~pojedyncza wiadomość o~pozycji nie wskazuje jednoznacznie strefy kodowania CPR (podrozdział~\ref{sec:cpr}). Odebranej pozycji nie można więc przyjąć jako danych referencyjnych bez sprawdzenia jej zgodności z~innymi informacjami. Próg \SI{10}{m} w~wymaganiu WR-5 przyjęto jako dwukrotność rozdzielczości kodowania CPR, która wynosi około \SI{5}{m}. Wykrywanie celowo fałszowanych wiadomości wykracza poza zakres pracy.
+
+Rozwiązania przedstawione w~podrozdziale~\ref{sec:istniejace} spełniają wymagania dotyczące odbioru i~dekodowania wiadomości ADS-B, lecz nie spełniają łącznie wymagań WN-3, WR-1 i~WR-2. Sieci odbiorników wymagają dostępu do internetu, a~odbiorniki hobbystyczne zwykle nie korzystają z~własnego odbiornika GNSS do wyznaczania czasu i~pozycji stacji. Spełnienie wszystkich wymagań wymagało zatem zaprojektowania własnej stacji bazowej, której architekturę przedstawiono w~kolejnym podrozdziale.
 % ---------------------------------------------------------------------
 \section{Architektura systemu}
 \label{sec:architektura}
