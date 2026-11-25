@@ -5,80 +5,45 @@
 \chapter{Wstęp}
 \label{chap:wstep}
 
-% Krótkie wprowadzenie w tematykę (2-3 zdania): czym jest ADS-B, po co
-% stacja bazowa. Bez podrozdziału - zwykły akapit przed 1.1.
-System ADS-B (ang. \emph{Automatic Dependent Surveillance--Broadcast}) jest techniką
-dozorowania ruchu lotniczego, w której statek powietrzny samodzielnie wyznacza swoje
-położenie za pomocą odbiornika GNSS i cyklicznie rozgłasza je, wraz z identyfikatorem,
-wysokością i prędkością, na częstotliwości \SI{1090}{MHz}~\cite{sun2021}. W odróżnieniu
-od radaru, który sam mierzy położenie obiektu, w ADS-B informację o pozycji dostarcza
-statek powietrzny~\cite{strohmeier2014realities}. W Unii Europejskiej wyposażenie
-w nadajnik ADS-B jest obowiązkowe dla statków powietrznych o maksymalnej masie
-startowej powyżej \SI{5700}{kg} lub prędkości przelotowej powyżej \SI{250}{kt}~\cite{ue2023_1770}.
-Ponieważ sygnały ADS-B nie są szyfrowane, można je odbierać tanimi odbiornikami
-radiowymi~\cite{sun2021}, co wykorzystano w niniejszej pracy. Szczegółowy opis
-systemu ADS-B przedstawiono w rozdziale~\ref{chap:teoria}.
+Każdy duży samolot pasażerski kilka razy na sekundę informuje otoczenie, gdzie się znajduje. Umożliwia to system ADS-B (ang.~\textit{Automatic Dependent Surveillance--Broadcast}), w~którym statek powietrzny wyznacza swoje położenie za pomocą pokładowego odbiornika nawigacji satelitarnej i~rozgłasza je drogą radiową na częstotliwości \SI{1090}{\mega\hertz}, razem z~identyfikatorem, wysokością i~prędkością~\cite{sun2021}. W~odróżnieniu od radaru, który sam mierzy położenie obiektu, w~ADS-B informację o~pozycji dostarcza sam statek powietrzny~\cite{strohmeier2014realities}. W~Unii Europejskiej nadajnik ADS-B jest obowiązkowy dla statków powietrznych o~maksymalnej masie startowej powyżej \SI{5700}{kg} lub prędkości przelotowej powyżej \SI{250}{kt}~\cite{ue2023_1770}.
 
-Samoloty są środkiem transportu powszechnie wykorzystywanym na całym świecie, a ich rozkłady lotów są bardzo napięte. Do regulowania ruchu i monitorowania przebiegu tras lotów potrzebny jest radar ADS-B (Automatic Dependent Surveillance-Broadcast). ADS-B to technologia dozorowania służąca do przesyłania informacji o statku powietrznym. Budowa radarów ADS-B i wież kontroli ruchu lotniczego (ATC, Air Traffic Control) na lotniskach trwa długo i jest bardzo kosztowna. Narzędzie RTL-SDR (Register Transfer Logic-Software Defined Radio) ma obniżyć koszty operacyjne i skrócić czas potrzebny na budowę radarów ADS-B i wież ATC. Zapewnia ono również większą mobilność, ponieważ można go używać w dowolnym miejscu, bez budowania go w konkretnej lokalizacji. W niniejszej pracy przeanalizowano działanie odbiornika sygnałów ADS-B opartego na RTL-SDR i Raspberry Pi. W analizie wykorzystano dwie anteny SDR jako odbiorniki sygnałów ADS-B, a pomiary przeprowadzono w różnych miejscach. Odebrane bity wiadomości są przetwarzane i wyświetlane za pomocą oprogramowania dump1090 i PiAware. Oczekiwanym rezultatem jest antena zdolna do odbioru sygnałów ADS-B z większym i optymalnym zasięgiem, stanowiąca alternatywę dla mini radaru ADS-B.
+Wiadomości ADS-B nie są szyfrowane, więc może je odebrać każdy, kto ma odpowiednią antenę i~odbiornik. Do ich odbioru wystarcza tani odbiornik radiowy SDR (ang.~\textit{software defined radio}) dołączony do komputera, w~którym większość przetwarzania sygnału odbywa się programowo~\cite{sun2021}. Dzięki temu odbiór ruchu lotniczego stał się popularnym projektem hobbystycznym, a~dane z~wielu takich odbiorników trafiają do serwisów śledzenia lotów, takich jak Flightradar24~\cite{fr24build}. W~niniejszej pracy ta sama technika posłużyła do innego celu: zbudowania przenośnej stacji, która w~terenie dostarcza dokładnych informacji o~położeniu statków powietrznych w~postaci zrozumiałej dla systemów robotycznych.
 
-
-
-% ---------------------------------------------------------------------
 \section{Motywacja}
 \label{sec:motywacja}
 
-% - dane ADS-B jako dane referencyjne (ground truth) do uczenia i oceny
-%   algorytmu wykrywania statków powietrznych na obrazie z kamery,
-% - pozycja samolotu + pozycja stacji + dokładny czas -> kierunek do
-%   samolotu -> automatyczne oznaczanie obrazów,
-% - sam algorytm detekcji wykracza poza zakres tej pracy.
+Algorytmy wykrywania obiektów na obrazie z~kamery uczy się i~ocenia na podstawie dużej liczby obrazów, na których zaznaczono położenie szukanych obiektów. Takie oznaczenia nazywa się danymi referencyjnymi. Ręczne oznaczanie statków powietrznych jest pracochłonne, ponieważ na nagraniach z~odległego nieba zajmują one często zaledwie kilka pikseli. Statek powietrzny wyposażony w~nadajnik ADS-B sam podaje jednak, gdzie się znajduje. Jeżeli znana jest również pozycja kamery i~dokładny czas wykonania zdjęcia, można obliczyć kierunek, w~którym statek powietrzny powinien być widoczny, i~oznaczyć go na obrazie automatycznie.
 
-% ---------------------------------------------------------------------
+Pomysł ten wykorzystano już w~badaniach nad wizyjnym wykrywaniem statków powietrznych. Zhang i~in.~\cite{zhang2022sta} użyli położenia z~wiadomości ADS-B jako informacji wstępnej przy segmentacji statków powietrznych na nagraniach z~lotniska, a~w~zbiorze danych TartanAviation~\cite{patrikar2025tartan} położenia te rzutowano na obraz z~kamer zamontowanych na stałe w~obrębie lotnisk. W~obu przypadkach odbiornik ADS-B działał jednak w~stałym miejscu, z~dostępem do zasilania i~sieci.
+
+Do zbierania danych w~różnych miejscach, np.\ na otwartym terenie z~dala od zabudowy, potrzebny jest odbiornik, który można zabrać ze sobą i~uruchomić bez przygotowań. Taki odbiornik musi sam ustalić swoją pozycję i~dokładny czas, pracować wiele godzin na baterii, bez internetu, a~wyniki udostępniać w~sposób łatwy do połączenia z~danymi z~kamery. Ostatni warunek spełnia środowisko ROS~2, powszechnie stosowane w~robotyce do wymiany danych między programami. Opracowanie takiej stacji jest przedmiotem niniejszej pracy. Sam algorytm wykrywania statków powietrznych na obrazie oraz integracja stacji z~kamerą wykraczają poza jej zakres.
+
 \section{Cel pracy}
 \label{sec:cel}
 
+Celem pracy jest opracowanie przenośnego systemu wbudowanego, nazywanego dalej stacją bazową, który na podstawie wiadomości ADS-B nadawanych przez statki powietrzne w~warunkach polowych, w~czasie rzeczywistym i~bez udziału operatora generuje dane referencyjne o~ich położeniu. Dane te obejmują pozycję każdego statku powietrznego wraz z~oceną jej wiarygodności, położenie statku względem stacji oraz znaczniki czasu w~skali UTC. Pozycja stacji i~czas są wyznaczane na podstawie sygnału GPS. Wyniki są udostępniane jako komunikaty środowiska ROS~2 i~jednocześnie zapisywane w~pamięci stacji, tak aby można je było przeanalizować po zakończeniu pomiarów.
 
-Celem pracy jest stworzenie przenośnego systemu wbudowanego, który na podstawie
-danych nadawanych przez transpondery ADS-B statków powietrznych będzie w stanie
-w~warunkach polowych, w~czasie rzeczywistym, automatycznie generować dane
-referencyjne o~ich położeniu. Dane te, uzupełnione o~pozycję stacji bazowej
-i~dokładny czas UTC wyznaczane na podstawie sygnału GPS, są udostępniane jako
-komunikaty w~środowisku ROS~2.0 oraz rejestrowane w~celu późniejszej analizy.
+Oczekiwanym rezultatem pracy jest działający prototyp stacji bazowej zasilanej z~powerbanka, jej oprogramowanie oraz wyniki badań, które pokazują, z~jaką dokładnością i~w~jakich warunkach stacja dostarcza danych referencyjnych.
 
 \section{Zakres pracy}
 \label{sec:zakres}
 
 Zakres pracy obejmuje:
 \begin{itemize}
-  \item przegląd zasad działania systemu ADS-B, odbioru sygnałów z~użyciem SDR,
-        wyznaczania pozycji i~czasu przez odbiornik GNSS, środowiska ROS~2 oraz
-        istniejących rozwiązań,
-  \item sformułowanie wymagań i~projekt architektury stacji bazowej wraz
-        z~modelem wyznaczania danych referencyjnych,
-  \item dobór odbiornika SDR, platformy wbudowanej i~pozostałych podzespołów
-        oraz wykonanie prototypu stacji zasilanego z~powerbanka,
-  \item implementację węzłów ROS~2 odpowiedzialnych za odbiór ramek ADS-B,
-        odczyt pozycji i~czasu z~odbiornika GPS, dekodowanie pozycji statków
-        powietrznych w~czasie rzeczywistym z~wykorzystaniem pozycji stacji oraz
-        wyświetlanie stanu systemu,
-  \item automatyczną rejestrację wszystkich danych z~wykorzystaniem rosbag2,
-  \item badania zasięgu odbioru, czasu pracy na zasilaniu bateryjnym, warunków
-        termicznych oraz jakości wyznaczanych danych referencyjnych.
+  \item przegląd zasad działania systemu ADS-B i~kodowania położenia CPR, odbioru sygnałów z~użyciem SDR, wyznaczania pozycji i~czasu przez odbiornik GNSS, środowiska ROS~2 oraz istniejących odbiorników ADS-B,
+  \item sformułowanie wymagań stawianych stacji bazowej na podstawie przypadków jej użycia, projekt architektury sprzętowej i~programowej oraz model wyznaczania danych referencyjnych,
+  \item porównanie i~wybór odbiornika SDR oraz platformy wbudowanej, a~następnie budowę prototypu z~komputerem Raspberry Pi~4B, odbiornikiem RTL-SDR Blog V3, modułem GPS, wyświetlaczem, przyciskiem zasilania i~diodą stanu, zasilanego z~powerbanka i~umieszczonego w~obudowie wykonanej w~technice druku 3D,
+  \item przygotowanie środowiska uruchomieniowego, w~którym węzły ROS~2 Jazzy pracują w~kontenerze Docker na jednostce z~systemem Ubuntu i~startują automatycznie po włączeniu zasilania,
+  \item implementację węzłów ROS~2 odpowiedzialnych za odbiór ramek ADS-B, odczyt pozycji i~czasu z~odbiornika GPS, monitorowanie temperatury i~zasilania oraz wyświetlanie stanu stacji,
+  \item implementację własnego dekodera, który w~czasie rzeczywistym wyznacza pozycje statków powietrznych dwiema niezależnymi metodami, porównuje ich wyniki i~oblicza położenie każdego statku względem stacji, czyli odległość, azymut i~kąt elewacji,
+  \item korektę zegara komputera na podstawie czasu z~odbiornika GPS, dzięki której znaczniki czasu wyników są wyrażane w~skali UTC także bez dostępu do internetu,
+  \item automatyczny zapis wszystkich danych, zarówno surowych, jak i~przetworzonych, z~wykorzystaniem narzędzia rosbag2, odporny na nagłą utratę zasilania,
+  \item badania stacji: weryfikację dekodera na danych syntetycznych, porównanie wyników z~niezależnym dekoderem i~danymi z~sieci OpenSky, pomiary zasięgu odbioru, czasu pracy na baterii, temperatury i~obciążenia procesora oraz dokładności wyznaczania czasu.
 \end{itemize}
 
-% ---------------------------------------------------------------------
 \section{Układ pracy}
 \label{sec:uklad}
 
-W rozdziale~\ref{chap:teoria} przedstawiono zasady działania systemu ADS-B,
-odbioru sygnałów z~użyciem SDR, wyznaczania pozycji i~czasu przez odbiornik
-GNSS oraz środowiska ROS~2, a~także przegląd istniejących rozwiązań.
-Rozdział~\ref{chap:projekt} zawiera wymagania stawiane stacji bazowej, jej
-architekturę, opis wymienianych komunikatów oraz model wyznaczania danych
-referencyjnych. W~rozdziale~\ref{chap:sprzet} opisano dobór podzespołów
-i~wykonanie warstwy sprzętowej stacji, a~w~rozdziale~\ref{chap:oprogramowanie}
---~jej oprogramowanie. Rozdział~\ref{chap:badania} przedstawia metodykę
-i~wyniki badań stacji, a~rozdział~\ref{chap:podsumowanie} --~podsumowanie
-i~wnioski. W~załączniku~\ref{app:instrukcja} zamieszczono instrukcję
-uruchomienia i~obsługi stacji, a~w~załączniku~\ref{app:kod} --~informacje
-o~kodzie źródłowym.
+W~rozdziale~\ref{chap:teoria} przedstawiono podstawy teoretyczne potrzebne do zrozumienia dalszej części pracy: budowę wiadomości ADS-B, sposób kodowania w~nich położenia, odbiór sygnałów z~użyciem SDR, wyznaczanie pozycji i~czasu przez odbiornik GNSS oraz środowisko ROS~2. Rozdział kończy przegląd istniejących rozwiązań. W~rozdziale~\ref{chap:projekt} opisano projekt stacji bazowej: przypadki użycia i~wymagania, architekturę systemu, tematy i~komunikaty ROS~2 oraz model wyznaczania danych referencyjnych.
+
+Rozdziały~\ref{chap:sprzet} i~\ref{chap:oprogramowanie} dotyczą wykonania stacji. Pierwszy z~nich opisuje dobór podzespołów, tor odbioru radiowego, odbiornik GPS, połączenia, zasilanie i~obudowę, a~drugi środowisko uruchomieniowe, węzły ROS~2, dekodowanie wiadomości ADS-B, zapis danych, interfejs użytkownika oraz uruchamianie i~zamykanie systemu. W~rozdziale~\ref{chap:badania} przedstawiono metodykę i~wyniki badań, a~w~rozdziale~\ref{chap:podsumowanie} podsumowano pracę, oceniono stopień realizacji celu i~wskazano kierunki dalszego rozwoju. Instrukcję uruchomienia i~obsługi stacji zamieszczono w~załączniku~\ref{app:instrukcja}, a~informacje o~kodzie źródłowym w~załączniku~\ref{app:kod}.

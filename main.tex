@@ -2,24 +2,19 @@
 %  Projekt dyplomowy (praca inżynierska) – WEAIiIB AGH
 %  Szablon zgodny z "Zasadami dyplomowania" (Decyzja Dziekana nr 6/2023)
 %  Kompilator w Overleaf: pdfLaTeX  (Menu -> Settings -> Compiler)
-%  Wersja 2026-10-29: nowy układ rozdziałów (warstwa sprzętowa / programowa)
-% =====================================================================
 
-% report  -> mamy \chapter (rozdziały), potrzebne w pracy dyplomowej
-% twoside -> marginesy lustrzane: nieparzyste L=3cm, parzyste P=3cm
-% openany -> rozdział zaczyna się na następnej stronie (bez pustych stron)
 \documentclass[a4paper,12pt,twoside,openany]{report}
 
 \input{tex/00_preamble}          % pakiety, marginesy, czcionka, odstępy
 
 % ------------------- DANE NA STRONĘ TYTUŁOWĄ ------------------------
-% Tytuł MUSI być identyczny z tematem zatwierdzonym w USOS-APD!
+
 \newcommand{\tytulPL}{Przenośny system logowania pozycji statków powietrznych w ROS 2.0 na podstawie transponderów ADS-B}
 \newcommand{\tytulEN}{Portable aircraft position logging system in ROS 2.0 based on ADS-B transponders}
 \newcommand{\autor}{Maksymilian Stach}
 \newcommand{\kierunek}{Automatyka i Robotyka}
 \newcommand{\opiekun}{dr inż. Mateusz Komorkiewicz}
-\newcommand{\rok}{2027}           % rok kalendarzowy złożenia pracy
+\newcommand{\rok}{2027}          
 
 \hypersetup{pdftitle={\tytulPL}, pdfauthor={\autor}}
 

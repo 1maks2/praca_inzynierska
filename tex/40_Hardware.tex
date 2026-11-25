@@ -1,17 +1,10 @@
-% =====================================================================
-%  4. WARSTWA SPRZĘTOWA STACJI BAZOWEJ  (nowy plik 2026-10-29)
-%  Objętość: ok. 8 stron.
-% =====================================================================
 \chapter{Warstwa sprzętowa stacji bazowej}
 \label{chap:sprzet}
 
-% 2-3 zdania: co jest w tym rozdziale.
 
-% ---------------------------------------------------------------------
 \section{Dobór podzespołów}
 \label{sec:dobor}
-% (ok. 2,5 str.) ANALIZA porównawcza na podstawie danych katalogowych
-% (nie "badanie"!). Każdy parametr w tabelach -> źródło w bibliografii.
+% ANALIZA porównawcza na podstawie danych katalogowych
 
 Dobór podzespołów przeprowadzono na podstawie analizy porównawczej parametrów
 katalogowych dostępnych rozwiązań, przyjmując kryteria wynikające z~wymagań
@@ -20,7 +13,6 @@ uwzględniono dostępność podzespołów, co pozwoliło skrócić czas budowy
 prototypu i~ograniczyć jego koszt. Poprawność dokonanego wyboru zweryfikowano
 pomiarami przedstawionymi w~rozdziale~\ref{chap:badania}.
 
-% --- Platforma obliczeniowa: uzupełnij komórki "--" z kart katalogowych ---
 \begin{table}[H]
   \centering
   \caption{Porównanie platform obliczeniowych}
@@ -38,11 +30,6 @@ pomiarami przedstawionymi w~rozdziale~\ref{chap:badania}.
   \end{tabular}
 \end{table}
 
-% Akapit: uzasadnienie wyboru Raspberry Pi 4B (pobór mocy, interfejsy,
-% obsługa ROS 2; GPU Jetsona niepotrzebne w zakresie pracy -> kierunek
-% rozwoju przy integracji z kamerą).
-
-% --- Odbiornik SDR ---
 \begin{table}[H]
   \centering
   \caption{Porównanie odbiorników SDR}
@@ -59,9 +46,6 @@ pomiarami przedstawionymi w~rozdziale~\ref{chap:badania}.
     \bottomrule
   \end{tabular}
 \end{table}
-
-% Akapit: uzasadnienie wyboru RTL-SDR Blog V3.
-% Akapit: odbiornik GPS (UART, NMEA), wzmianka o odbiornikach z PPS.
 
 Wybrane podzespoły zestawiono w~tabeli~\ref{tab:podzespoly}.
 
@@ -87,20 +71,20 @@ Wybrane podzespoły zestawiono w~tabeli~\ref{tab:podzespoly}.
 % ---------------------------------------------------------------------
 \section{Tor odbioru radiowego}
 \label{sec:tor_radiowy}
-% (ok. 1,5 str.) Antena dipolowa ćwierćfalowa (odwołanie do wzoru
+% Antena dipolowa ćwierćfalowa (odwołanie do wzoru
 % \eqref{eq:lambda}), polaryzacja pionowa, RTL-SDR, zakłócenia od USB,
 % umiejscowienie anteny.
 
 % ---------------------------------------------------------------------
 \section{Odbiornik GPS}
 \label{sec:odbiornik_gps}
-% (ok. 1 str.) Połączenie UART, ustawienia, komunikaty, antena z widokiem
+%Połączenie UART, ustawienia, komunikaty, antena z widokiem
 % na niebo, utrata fixa w pomieszczeniu.
 
 % ---------------------------------------------------------------------
 \section{Elementy obsługi i~schemat połączeń}
 \label{sec:polaczenia}
-% (ok. 1,5 str.) Wyświetlacz, dioda, przycisk; schemat (rysunek);
+% Wyświetlacz, dioda, przycisk; schemat (rysunek);
 % konflikt GPIO3 z I2C (dlaczego I2C wyłączone).
 
 Połączenia elementów z~wyprowadzeniami złącza GPIO komputera Raspberry Pi
@@ -126,6 +110,5 @@ zestawiono w~tabeli~\ref{tab:gpio}.
 % ---------------------------------------------------------------------
 \section{Zasilanie i~obudowa}
 \label{sec:zasilanie}
-% (ok. 1,5 str.) Powerbank (brak informacji o stanie naładowania przez
-% USB, nagłe odcięcie), obudowa drukowana 3D, chłodzenie, okienko na
+% Powerbank, obudowa drukowana 3D, chłodzenie, okienko na
 % wskaźnik powerbanka, dostęp do ładowania.

@@ -1,9 +1,7 @@
-% =====================================================================
+
 % =====================================================================
 \chapter{Projekt stacji bazowej}
 \label{chap:projekt}
-
-% 2-3 zdania: co jest w tym rozdziale.
 
 % ---------------------------------------------------------------------
 \section{Wymagania}
@@ -206,17 +204,6 @@ Rozwiązania przedstawione w~podrozdziale~\ref{sec:istniejace} spełniają wymag
 % ---------------------------------------------------------------------
 \section{Architektura systemu}
 \label{sec:architektura}
-% (ok. 2 str.) Podział na warstwę sprzętową i programową; podział
-% demodulacja (dump1090) / dekodowanie (decoder_node); diagram przepływu
-% danych; scenariusz pracy w terenie (włączenie -> nagrywanie ->
-% wyłączenie przyciskiem -> skopiowanie danych).
-% ======================================================================
-% rys_sprzet.tex – schemat blokowy warstwy sprzętowej stacji bazowej
-% Wstawić w rozdziale 3 (Architektura) poleceniem: \input{tex/rys_sprzet}
-% Wymaga w preambule: tikz + biblioteki positioning, arrows.meta, calc,
-%                     decorations.pathmorphing; siunitx; kolor akcent.
-% Kod TikZ przygotowano z wykorzystaniem Claude (Anthropic) – zob. deklarację AI.
-% ======================================================================
 
 Warstwę sprzętową stacji bazowej przedstawiono na rysunku~\ref{rys:sprzet}. Centralnym elementem jest komputer Raspberry Pi~4B, do którego przez port USB dołączono odbiornik SDR, a przez interfejs UART moduł odbiornika GPS. Wyświetlacz TFT, dioda stanu i~przycisk zasilania są połączone bezpośrednio z~wyprowadzeniami GPIO.
 
@@ -237,14 +224,14 @@ Warstwę sprzętową stacji bazowej przedstawiono na rysunku~\ref{rys:sprzet}. C
                               post length=2mm}},
     etyk/.style={font=\scriptsize, align=center, fill=white, inner sep=1pt},
 ]
-% ---------------- Raspberry Pi (środek) ----------------
+
 \node[draw, very thick, fill=akcent!20, align=center,
       minimum width=44mm, minimum height=44mm] (rpi) at (0,0)
      {\textbf{Raspberry Pi 4B}\\[2mm]
       \scriptsize Ubuntu, Docker,\\ \scriptsize ROS~2 Jazzy,\\
       \scriptsize dump1090};
 
-% ---------------- lewa strona: odbiór radiowy ----------------
+
 \node[blok] (sdr) at (-6.3, 1.3) {Odbiornik SDR\\RTL-SDR Blog V3};
 \node[blok] (gps) at (-6.3,-1.3) {Moduł odbiornika GPS};
 \node[zewn] (adsb) at (-6.3, 3.6)
@@ -261,7 +248,7 @@ Warstwę sprzętową stacji bazowej przedstawiono na rysunku~\ref{rys:sprzet}. C
      {UART} node[etyk, below=1pt, fill=none] {\SI{9600}{bit/s}}
      (gps.east -| rpi.west);
 
-% ---------------- prawa strona: interfejs użytkownika ----------------
+
 \node[blok] (tft) at (6.3, 1.5) {Wyświetlacz TFT\\ILI9341, 240$\times$320};
 \node[blok] (led) at (6.3, 0.0) {Dioda LED stanu};
 \node[blok] (btn) at (6.3,-1.5) {Przycisk zasilania};
@@ -272,7 +259,7 @@ Warstwę sprzętową stacji bazowej przedstawiono na rysunku~\ref{rys:sprzet}. C
 \draw[dane] (btn.west) -- node[etyk, above=1pt, fill=none] {GPIO3}
      (btn.west -| rpi.east);
 
-% ---------------- dół: zasilanie i pamięć ----------------
+
 \node[blok=31mm] (pb)  at (-1.9,-4.0) {Powerbank\\LYNXER RPP-272};
 \node[blok=31mm] (usb) at ( 1.9,-4.0) {Pamięć USB \SI{64}{GB}\\(system, pliki MCAP)};
 \draw[zasil] (pb.north) -- node[etyk, left=1pt, fill=none]
@@ -280,7 +267,7 @@ Warstwę sprzętową stacji bazowej przedstawiono na rysunku~\ref{rys:sprzet}. C
 \draw[<->, thick] (usb.north) -- node[etyk, right=1pt, fill=none] {USB}
      (usb.north |- rpi.south);
 
-% ---------------- góra: opcjonalny komputer ----------------
+
 \node[blok=36mm, fill=white, dashed] (pc) at (0, 3.9)
      {Komputer do analizy\\(opcjonalnie)};
 \draw[opcja] (pc.south) -- node[etyk, right=1pt, fill=none]
@@ -297,19 +284,7 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 % ---------------------------------------------------------------------
 \section{Tematy i~komunikaty}
 \label{sec:tematy}
-% (ok. 1 str.) Lista tematów (tabela) + definicja komunikatu AircraftState
-% (pola, jednostki SI, NaN = brak wartości, stałe position_quality),
-% uzasadnienie własnego typu zamiast JSON w std_msgs/String.
 
-% ======================================================================
-% rys_graf_ros.tex – graf obliczeniowy ROS 2 stacji bazowej
-% (węzły, tematy, typy komunikatów, źródła danych w systemie gospodarza)
-% Wstawić w rozdziale 3 (Architektura) poleceniem: \input{tex/rys_graf_ros}
-% Wymaga w preambule: tikz + biblioteki positioning, arrows.meta, fit,
-%                     backgrounds, calc; kolor akcent.
-% Nazwy węzłów i tematów zgodne z repozytorium (commit 33bb6ff).
-% Kod TikZ przygotowano z wykorzystaniem Claude (Anthropic) – zob. deklarację AI.
-% ======================================================================
 \begin{figure}[!htb]
 \centering
 \begin{tikzpicture}[
@@ -325,10 +300,9 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
     pol/.style={->, thick},
     etyk/.style={font=\scriptsize, align=center, inner sep=1pt},
 ]
-% makro: nazwa tematu (czcionka maszynowa) + typ komunikatu (kursywa)
+
 \newcommand{\tm}[2]{{\scriptsize\ttfamily #1}\\[-0.6mm]{\scriptsize\itshape #2}}
 
-% ---------------- system gospodarza (źródła danych) ----------------
 \node[host] (d1090) at (0, 3.65)
      {\textbf{dump1090}\\(demodulacja)\\TCP 30003: SBS\\TCP 30002: AVR};
 \node[host] (uart)  at (0, 1.25) {\texttt{/dev/ttyAMA0}\\(UART, GPS)};
@@ -336,7 +310,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[pol] ($(d1090.north)+(0,0.6)$) node[above, etyk] {z RTL-SDR (USB)}
      -- (d1090.north);
 
-% ---------------- węzły publikujące ----------------
 \node[wezel] (sdr)  at (3.5, 3.65) {sdr\_radar\_node};
 \node[wezel] (gpsn) at (3.5, 1.25) {gps\_node};
 \node[wezel] (pwr)  at (3.5,-1.15) {power\_monitor\_node};
@@ -345,7 +318,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[pol] (uart)  -- (gpsn);
 \draw[pol] (hwmon) -- (pwr);
 
-% ---------------- tematy ----------------
 \node[temat] (raw)    at (6.95, 4.25) {\tm{/aircraft/raw}{std\_msgs/String}};
 \node[temat] (frames) at (6.95, 3.05) {\tm{/aircraft/frames}{std\_msgs/String}};
 \node[temat] (fix)    at (6.95, 1.85) {\tm{/gps/fix}{sensor\_msgs/NavSatFix}};
@@ -360,7 +332,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[pol] (pwr.east)  -- (uv.west);
 \draw[pol] (pwr.east)  -- (temp.west);
 
-% ---------------- przetwarzanie i prezentacja ----------------
 \node[wezel] (dec) at (10.45, 2.45) {decoder\_node};
 \node[temat] (state) at (10.45, 0.75)
      {\tm{/aircraft/state}{aircraft\_interfaces/\\[-0.6mm]AircraftState}};
@@ -375,7 +346,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[pol] (uv.east)    -- (disp.west);
 \draw[pol] (temp.east)  -| ([xshift=-6mm]disp.south);
 
-% ---------------- moduł adsb_decoder (nie jest węzłem) ----------------
 \node[draw, thick, dashed, fill=white, align=center, text width=29mm,
       minimum height=8mm, inner sep=2pt] (mod) at (10.95, 4.25)
      {{\scriptsize\ttfamily adsb\_decoder.py}\\[-0.6mm]
@@ -383,9 +353,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[->, dashed, thick, >={Straight Barb[length=1.8mm]}]
      (mod.south |- dec.north) -- node[etyk, right=1mm] {«import»} (mod.south);
 
-% ---------------- rejestracja rosbag2 ----------------
-% ramka w kształcie litery L: kolumna tematów + temat /aircraft/state
-% (bez węzła decoder_node, który nie jest tematem)
 \coordinate (gL) at ($(raw.west)+(-2.5mm,0)$);
 \coordinate (gR) at ($(raw.east)+(2.5mm,0)$);
 \coordinate (gT) at ($(raw.north)+(0,2.5mm)$);
@@ -402,7 +369,6 @@ opcjonalne. Przy strzałkach podano interfejsy i numery wyprowadzeń GPIO
 \draw[->, line width=1.4pt] (gB -| bag.north) -- node[etyk, left=1mm]
      {wszystkie tematy z~ramki} (bag.north);
 
-% ---------------- granice: Ubuntu (poza kontenerem) i kontener ----------------
 \begin{scope}[on background layer]
   \node[draw, thick, densely dotted, rounded corners=2mm,
         fit=(sdr)(pwr)(raw)(temp)(state)(disp)(mod)(bag)(mcap), inner sep=3mm,
@@ -447,9 +413,4 @@ Przepływ danych w~środowisku ROS~2 pokazano na rysunku~\ref{rys:graf_ros}. Zgo
   \end{tabular}
 \end{table}
 
-% ---------------------------------------------------------------------
-%  3.4. Model wyznaczania danych referencyjnych (osobny plik, zaczyna
-%  się od \section). Umieszczony PO architekturze i tematach, bo model
-%  korzysta z pojęć tam wprowadzonych (/gps/time_ref, znaczniki czasu).
-% ---------------------------------------------------------------------
 \input{tex/35_Model}
